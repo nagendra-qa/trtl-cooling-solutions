@@ -8,17 +8,20 @@ const workOrderSchema = new mongoose.Schema({
   },
   customer: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Customer',
-    required: true
+    ref: 'Customer'
   },
   camp: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Camp',
-    required: true
+    ref: 'Camp'
   },
   serviceDate: {
-    type: Date,
-    required: true
+    type: Date
+  },
+  projectName: {
+    type: String
+  },
+  referenceNo: {
+    type: String
   },
   pdfFile: {
     filename: String,
@@ -30,10 +33,15 @@ const workOrderSchema = new mongoose.Schema({
   },
   services: [{
     description: String,
+    sacCode: String,
+    unit: String,
     quantity: Number,
-    unitPrice: Number,
+    rate: Number,
     amount: Number
   }],
+  totalAmount: {
+    type: Number
+  },
   technicianName: String,
   workDescription: String,
   status: {

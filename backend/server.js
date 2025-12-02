@@ -28,6 +28,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ac-servic
 });
 
 // Routes
+app.use('/api/admin', require('./routes/admin'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/camps', require('./routes/camps'));
 app.use('/api/workorders', require('./routes/workorders'));

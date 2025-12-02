@@ -8,18 +8,15 @@ const billSchema = new mongoose.Schema({
   },
   workOrder: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'WorkOrder',
-    required: true
+    ref: 'WorkOrder'
   },
   customer: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Customer',
-    required: true
+    ref: 'Customer'
   },
   camp: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Camp',
-    required: true
+    ref: 'Camp'
   },
   billDate: {
     type: Date,

@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { billsAPI, workOrdersAPI, customersAPI } from '../services/api';
+import { billsAPI, workOrdersAPI } from '../services/api';
 
 const Bills = () => {
   const [bills, setBills] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     billNumber: '',
     workOrder: '',
-    customer: '',
-    camp: '',
     billDate: new Date().toISOString().split('T')[0],
     customerWONumber: '',
     customerWODate: '',
@@ -27,7 +24,6 @@ const Bills = () => {
   useEffect(() => {
     fetchBills();
     fetchWorkOrders();
-    fetchCustomers();
   }, []);
 
   const fetchBills = async () => {
@@ -47,15 +43,6 @@ const Bills = () => {
       setWorkOrders(response.data);
     } catch (error) {
       console.error('Error fetching work orders:', error);
-    }
-  };
-
-  const fetchCustomers = async () => {
-    try {
-      const response = await customersAPI.getAll();
-      setCustomers(response.data);
-    } catch (error) {
-      console.error('Error fetching customers:', error);
     }
   };
 
@@ -118,8 +105,6 @@ const Bills = () => {
       setFormData({
         ...formData,
         workOrder: woId,
-        customer: selectedWO.customer._id,
-        camp: selectedWO.camp._id,
         customerWONumber: selectedWO.workOrderNumber,
         customerWODate: selectedWO.serviceDate ? new Date(selectedWO.serviceDate).toISOString().split('T')[0] : '',
         projectName: selectedWO.projectName || '',
@@ -188,8 +173,6 @@ const Bills = () => {
     setFormData({
       billNumber: '',
       workOrder: '',
-      customer: '',
-      camp: '',
       billDate: new Date().toISOString().split('T')[0],
       customerWONumber: '',
       customerWODate: '',
@@ -232,12 +215,13 @@ const Bills = () => {
         <table>
           <thead>
             <tr>
-              <th>Bill Number</th>
-              <th>Customer</th>
-              <th>Camp</th>
-              <th>Date</th>
+              <th>Invoice Number</th>
+              <th>Invoice Date</th>
+              <th>Customer WO No</th>
+              <th>Customer WO Date</th>
+              <th>Project</th>
+              <th>Reference</th>
               <th>Amount</th>
-              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -245,27 +229,19 @@ const Bills = () => {
             {bills.map((bill) => (
               <tr key={bill._id}>
                 <td>{bill.billNumber}</td>
-                <td>{bill.customer.name}</td>
-                <td>{bill.camp.campName}</td>
-                <td>{new Date(bill.billDate).toLocaleDateString()}</td>
+                <td>{new Date(bill.billDate).toLocaleDateString('en-IN')}</td>
+                <td>{bill.customerWONumber || '-'}</td>
+                <td>{bill.customerWODate ? new Date(bill.customerWODate).toLocaleDateString('en-IN') : '-'}</td>
+                <td>{bill.projectName || '-'}</td>
+                <td>{bill.referenceNo || '-'}</td>
                 <td>₹{bill.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                <td>
-                  <span style={{
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    backgroundColor: bill.status === 'paid' ? '#d4edda' : '#fff3cd',
-                    color: bill.status === 'paid' ? '#155724' : '#856404'
-                  }}>
-                    {bill.status}
-                  </span>
-                </td>
                 <td>
                   <button
                     className="btn btn-success"
                     style={{ marginRight: '10px' }}
                     onClick={() => handleDownloadPDF(bill._id, bill.billNumber)}
                   >
-                    Download PDF
+                    📄 PDF
                   </button>
                   <button
                     className="btn btn-danger"
@@ -278,7 +254,7 @@ const Bills = () => {
             ))}
             {bills.length === 0 && (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center' }}>No bills found</td>
+                <td colSpan="8" style={{ textAlign: 'center' }}>No bills found</td>
               </tr>
             )}
           </tbody>
@@ -334,7 +310,7 @@ const Bills = () => {
                   <option value="">Select Work Order (Optional)</option>
                   {workOrders.map((wo) => (
                     <option key={wo._id} value={wo._id}>
-                      {wo.workOrderNumber} - {wo.customer.name} - {wo.camp.campName}
+                      WO#{wo.workOrderNumber} - {wo.projectName || 'N/A'}
                     </option>
                   ))}
                 </select>
@@ -390,41 +366,27 @@ const Bills = () => {
               </div>
 
               <div className="form-group">
-                <label>Customer *</label>
-                <select
-                  name="customer"
-                  className="form-control"
-                  value={formData.customer}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer._id} value={customer._id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
                 <label>Services / Items</label>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', marginBottom: '10px' }}>
                     <thead>
                       <tr>
+                        <th style={{ width: '60px' }}>SL No</th>
                         <th>Description</th>
                         <th style={{ width: '100px' }}>SAC Code</th>
                         <th style={{ width: '80px' }}>Unit</th>
                         <th style={{ width: '80px' }}>Qty</th>
-                        <th style={{ width: '100px' }}>Rate</th>
-                        <th style={{ width: '120px' }}>Amount</th>
+                        <th style={{ width: '100px' }}>Rate<br/>(In Rs)</th>
+                        <th style={{ width: '120px' }}>Amount<br/>(In Rs)</th>
                         <th style={{ width: '60px' }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {formData.items.map((item, index) => (
                         <tr key={index}>
+                          <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                            <strong>{index + 1}</strong>
+                          </td>
                           <td>
                             <textarea
                               placeholder="Service description"
@@ -501,6 +463,36 @@ const Bills = () => {
                           </td>
                         </tr>
                       ))}
+                      {/* Total Amount Row */}
+                      <tr style={{ fontWeight: 'bold', borderTop: '2px solid #333' }}>
+                        <td colSpan="6" style={{ textAlign: 'right', padding: '10px' }}>
+                          Total Amount
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'right' }}>
+                          {totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td></td>
+                      </tr>
+                      {/* Round Up Row */}
+                      <tr style={{ fontWeight: 'bold' }}>
+                        <td colSpan="6" style={{ textAlign: 'right', padding: '10px' }}>
+                          Round Up
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'right' }}>
+                          0.00
+                        </td>
+                        <td></td>
+                      </tr>
+                      {/* Grand Total Row */}
+                      <tr style={{ fontWeight: 'bold', borderTop: '2px solid #333' }}>
+                        <td colSpan="6" style={{ textAlign: 'right', padding: '10px' }}>
+                          Grand Total
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'right' }}>
+                          {grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td></td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>

@@ -9,6 +9,23 @@ export const api = axios.create({
   },
 });
 
+// Add token to requests if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Admin API
+export const adminAPI = {
+  login: (data) => api.post('/admin/login', data),
+  verify: () => api.get('/admin/verify'),
+  setup: (data) => api.post('/admin/setup', data),
+  changePassword: (data) => api.post('/admin/change-password', data),
+};
+
 // Company API
 export const companyAPI = {
   getDetails: () => api.get('/company'),

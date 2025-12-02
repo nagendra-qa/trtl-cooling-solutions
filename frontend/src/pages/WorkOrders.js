@@ -1,49 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { workOrdersAPI, customersAPI, campsAPI } from '../services/api';
+import { workOrdersAPI } from '../services/api';
 
 const WorkOrders = () => {
   const [workOrders, setWorkOrders] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [camps, setCamps] = useState([]);
-  const [allCamps, setAllCamps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [pdfFile, setPdfFile] = useState(null);
-  const [formData, setFormData] = useState({
-    workOrderNumber: '',
-    customer: '',
-    camp: '',
-    serviceDate: '',
-    technicianName: '',
-    workDescription: '',
-    services: []
-  });
-  const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    fetchCustomers();
-    fetchAllCamps();
     fetchWorkOrders();
   }, []);
-
-  const fetchCustomers = async () => {
-    try {
-      const response = await customersAPI.getAll();
-      setCustomers(response.data);
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-    }
-  };
-
-  const fetchAllCamps = async () => {
-    try {
-      const response = await campsAPI.getAll();
-      setAllCamps(response.data);
-    } catch (error) {
-      console.error('Error fetching camps:', error);
-    }
-  };
 
   const fetchWorkOrders = async () => {
     try {
@@ -61,32 +29,26 @@ const WorkOrders = () => {
     setTimeout(() => setMessage({ type: '', text: '' }), 3000);
   };
 
-  const handleCustomerChange = (customerId) => {
-    setFormData({ ...formData, customer: customerId, camp: '' });
-    const customerCamps = allCamps.filter(camp => camp.customer._id === customerId);
-    setCamps(customerCamps);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const data = new FormData();
-      data.append('data', JSON.stringify(formData));
-      if (pdfFile) {
-        data.append('pdf', pdfFile);
-      }
+    if (!pdfFile) {
+      showMessage('error', 'Please select a PDF file');
+      return;
+    }
 
-      if (editingId) {
-        await workOrdersAPI.update(editingId, formData);
-        showMessage('success', 'Work order updated successfully');
-      } else {
-        await workOrdersAPI.create(data);
-        showMessage('success', 'Work order created successfully');
-      }
+    try {
+      setUploading(true);
+      const data = new FormData();
+      data.append('pdf', pdfFile);
+
+      await workOrdersAPI.create(data);
+      showMessage('success', 'Work order uploaded and processed successfully');
       fetchWorkOrders();
       resetForm();
     } catch (error) {
-      showMessage('error', error.response?.data?.message || 'Error saving work order');
+      showMessage('error', error.response?.data?.message || 'Error uploading work order');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -103,23 +65,8 @@ const WorkOrders = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      workOrderNumber: '',
-      customer: '',
-      camp: '',
-      serviceDate: '',
-      technicianName: '',
-      workDescription: '',
-      services: []
-    });
     setPdfFile(null);
-    setEditingId(null);
     setShowModal(false);
-    setCamps([]);
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleFileChange = (e) => {
@@ -150,10 +97,10 @@ const WorkOrders = () => {
           <thead>
             <tr>
               <th>WO Number</th>
-              <th>Customer</th>
-              <th>Camp</th>
-              <th>Service Date</th>
-              <th>Technician</th>
+              <th>WO Date</th>
+              <th>Project Name</th>
+              <th>Reference No</th>
+              <th>Total Amount</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -162,10 +109,10 @@ const WorkOrders = () => {
             {workOrders.map((wo) => (
               <tr key={wo._id}>
                 <td>{wo.workOrderNumber}</td>
-                <td>{wo.customer.name}</td>
-                <td>{wo.camp.campName}</td>
-                <td>{new Date(wo.serviceDate).toLocaleDateString()}</td>
-                <td>{wo.technicianName || '-'}</td>
+                <td>{wo.serviceDate ? new Date(wo.serviceDate).toLocaleDateString('en-IN') : '-'}</td>
+                <td>{wo.projectName || '-'}</td>
+                <td>{wo.referenceNo || '-'}</td>
+                <td>{wo.totalAmount ? `₹${wo.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}</td>
                 <td>
                   <span style={{
                     padding: '4px 8px',
@@ -210,89 +157,12 @@ const WorkOrders = () => {
         <div className="modal">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>Upload Work Order</h2>
+              <h2>Upload Work Order PDF</h2>
               <button className="close-btn" onClick={resetForm}>&times;</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Work Order Number *</label>
-                <input
-                  type="text"
-                  name="workOrderNumber"
-                  className="form-control"
-                  value={formData.workOrderNumber}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Customer *</label>
-                <select
-                  name="customer"
-                  className="form-control"
-                  value={formData.customer}
-                  onChange={(e) => handleCustomerChange(e.target.value)}
-                  required
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer._id} value={customer._id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Camp *</label>
-                <select
-                  name="camp"
-                  className="form-control"
-                  value={formData.camp}
-                  onChange={handleChange}
-                  required
-                  disabled={!formData.customer}
-                >
-                  <option value="">Select Camp</option>
-                  {camps.map((camp) => (
-                    <option key={camp._id} value={camp._id}>
-                      {camp.campName} - {camp.location}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Service Date *</label>
-                <input
-                  type="date"
-                  name="serviceDate"
-                  className="form-control"
-                  value={formData.serviceDate}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Technician Name</label>
-                <input
-                  type="text"
-                  name="technicianName"
-                  className="form-control"
-                  value={formData.technicianName}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label>Work Description</label>
-                <textarea
-                  name="workDescription"
-                  className="form-control"
-                  value={formData.workDescription}
-                  onChange={handleChange}
-                  rows="3"
-                ></textarea>
-              </div>
-              <div className="form-group">
-                <label>Upload Work Order PDF *</label>
+                <label>Work Order PDF File *</label>
                 <input
                   type="file"
                   className="form-control"
@@ -300,13 +170,21 @@ const WorkOrders = () => {
                   onChange={handleFileChange}
                   required
                 />
+                <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                  System will automatically extract: WO Number, WO Date, Project Name, Reference, Services, and Total Amount
+                </small>
               </div>
+              {pdfFile && (
+                <div style={{ padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px', marginBottom: '15px' }}>
+                  <strong>Selected File:</strong> {pdfFile.name}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-secondary" onClick={resetForm}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Upload
+                <button type="submit" className="btn btn-primary" disabled={uploading}>
+                  {uploading ? 'Processing...' : 'Upload & Extract Data'}
                 </button>
               </div>
             </form>

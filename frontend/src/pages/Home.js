@@ -27,15 +27,15 @@ const Home = () => {
     'Cassette AC': '/Images/Cassette_AC.jpeg',
     'VRF AC': '/Images/VRF_AC.jpg',
     'AHU AC': '/Images/AHU_AC.jpeg',
-    'AC Installation': 'https://images.unsplash.com/photo-1631545806609-c2f4833a0b41?w=400&h=250&fit=crop',
-    'AC Repair & Maintenance': 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400&h=250&fit=crop',
-    'Preventive Maintenance (PPM)': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=250&fit=crop',
-    'Gas Charging': 'https://images.unsplash.com/photo-1635405074683-96d6921a9a0f?w=400&h=250&fit=crop',
-    'Filter Cleaning & Replacement': 'https://images.unsplash.com/photo-1581578949510-fa7315c4c350?w=400&h=250&fit=crop',
-    'Strainer Cleaning': 'https://images.unsplash.com/photo-1604754742629-3e580a61f696?w=400&h=250&fit=crop',
-    'Chemical Cleaning': 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=400&h=250&fit=crop',
-    'Compressor Repair': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=250&fit=crop',
-    '24/7 Emergency Services': 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=250&fit=crop'
+    'AC Installation': 'https://images.unsplash.com/photo-1631545806609-c2f4833a0b41?w=400&h=250&fit=crop&auto=format&q=70',
+    'AC Repair & Maintenance': 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400&h=250&fit=crop&auto=format&q=70',
+    'Preventive Maintenance (PPM)': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=250&fit=crop&auto=format&q=70',
+    'Gas Charging': 'https://images.unsplash.com/photo-1635405074683-96d6921a9a0f?w=400&h=250&fit=crop&auto=format&q=70',
+    'Filter Cleaning & Replacement': 'https://images.unsplash.com/photo-1581578949510-fa7315c4c350?w=400&h=250&fit=crop&auto=format&q=70',
+    'Strainer Cleaning': 'https://images.unsplash.com/photo-1604754742629-3e580a61f696?w=400&h=250&fit=crop&auto=format&q=70',
+    'Chemical Cleaning': 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=400&h=250&fit=crop&auto=format&q=70',
+    'Compressor Repair': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=250&fit=crop&auto=format&q=70',
+    '24/7 Emergency Services': 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=250&fit=crop&auto=format&q=70'
   };
 
   if (loading) {
@@ -82,8 +82,10 @@ const Home = () => {
 
           <div className="hero-image">
             <img
-              src="https://images.unsplash.com/photo-1631545806609-c2f4833a0b41?w=600&h=500&fit=crop"
+              src="https://images.unsplash.com/photo-1631545806609-c2f4833a0b41?w=600&h=500&fit=crop&auto=format&q=75"
               alt="AC Unit"
+              loading="eager"
+              decoding="async"
               style={{
                 maxWidth: '100%',
                 height: 'auto',
@@ -130,7 +132,7 @@ const Home = () => {
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h2 style={{ color: '#1e3c72', fontSize: '36px', marginBottom: '15px' }}>Our Services</h2>
+          <h2 id="services" style={{ color: '#1e3c72', fontSize: '36px', marginBottom: '15px' }}>Our Services</h2>
           <p style={{ color: '#666', fontSize: '16px' }}>Comprehensive AC Solutions for Your Business</p>
         </div>
 
@@ -147,8 +149,10 @@ const Home = () => {
                 position: 'relative'
               }}>
                 <img
-                  src={serviceImages[service] || 'https://images.unsplash.com/photo-1631545806609-c2f4833a0b41?w=400&h=250&fit=crop'}
+                  src={serviceImages[service] || 'https://images.unsplash.com/photo-1631545806609-c2f4833a0b41?w=400&h=250&fit=crop&auto=format&q=70'}
                   alt={service}
+                  loading="lazy"
+                  decoding="async"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -168,6 +172,68 @@ const Home = () => {
           ))}
         </div>
 
+        {/* Locations Section */}
+        <div style={{
+          textAlign: 'center',
+          marginTop: '60px',
+          marginBottom: '40px',
+          padding: '40px 20px',
+          background: '#f8f9fa',
+          borderRadius: '12px'
+        }}>
+          <h2 id="locations" style={{ color: '#1e3c72', fontSize: '36px', marginBottom: '15px' }}>Service Locations</h2>
+          <p style={{ color: '#666', fontSize: '16px', marginBottom: '30px' }}>We serve across Hyderabad and surrounding areas</p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '20px',
+            maxWidth: '900px',
+            margin: '0 auto'
+          }}>
+            <div style={{
+              background: 'white',
+              padding: '20px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '10px' }}>📍</div>
+              <h4 style={{ color: '#1e3c72', marginBottom: '8px' }}>Chanda Nagar</h4>
+              <p style={{ color: '#666', fontSize: '14px' }}>Main Office</p>
+            </div>
+            <div style={{
+              background: 'white',
+              padding: '20px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '10px' }}>📍</div>
+              <h4 style={{ color: '#1e3c72', marginBottom: '8px' }}>Gachibowli</h4>
+              <p style={{ color: '#666', fontSize: '14px' }}>Service Area</p>
+            </div>
+            <div style={{
+              background: 'white',
+              padding: '20px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '10px' }}>📍</div>
+              <h4 style={{ color: '#1e3c72', marginBottom: '8px' }}>Madhapur</h4>
+              <p style={{ color: '#666', fontSize: '14px' }}>Service Area</p>
+            </div>
+            <div style={{
+              background: 'white',
+              padding: '20px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '10px' }}>📍</div>
+              <h4 style={{ color: '#1e3c72', marginBottom: '8px' }}>Hyderabad</h4>
+              <p style={{ color: '#666', fontSize: '14px' }}>All Areas</p>
+            </div>
+          </div>
+        </div>
+
         <div style={{
           background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
           color: 'white',
@@ -177,7 +243,7 @@ const Home = () => {
           marginTop: '50px',
           marginBottom: '30px'
         }}>
-          <h2 style={{ fontSize: '32px', marginBottom: '25px' }}>Get in Touch</h2>
+          <h2 id="contact" style={{ fontSize: '32px', marginBottom: '25px' }}>Get in Touch</h2>
           <p style={{ fontSize: '18px', marginBottom: '30px' }}>
             Contact us for all your AC service needs
           </p>
