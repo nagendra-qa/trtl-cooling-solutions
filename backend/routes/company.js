@@ -6,7 +6,7 @@ router.get('/', (req, res) => {
   res.json({
     name: process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO',
     pan: process.env.COMPANY_PAN || 'DJYPM4672Q',
-    email: process.env.COMPANY_EMAIL || 'info@acservice.com',
+    email: process.env.COMPANY_EMAIL || 'eshwarsvp99.com@gmail.com',
     phone: process.env.COMPANY_PHONE || '+91-8179697191',
     officeAddress: process.env.COMPANY_OFFICE_ADDRESS || 'Plot no-721, Huda Colony, Chanda Nagar, Hyderabad-500050',
     billAddress: process.env.COMPANY_BILL_ADDRESS || 'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',

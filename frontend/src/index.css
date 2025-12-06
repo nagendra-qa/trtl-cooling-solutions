@@ -1,3 +1,21 @@
+/* Cooling Blue Color Scheme - Option 1 */
+:root {
+  --primary-blue: #0ea5e9;
+  --dark-blue: #0c4a6e;
+  --accent-cyan: #06b6d4;
+  --hover-blue: #0284c7;
+  --white: #ffffff;
+  --light-gray: #f4f4f4;
+  --dark-gray: #383838;
+  --secondary-gray: #707070;
+  --light-blue: rgba(14, 165, 233, 0.1);
+
+  /* Legacy aliases for backward compatibility */
+  --primary-green: #0ea5e9;
+  --hover-green: #0284c7;
+  --light-green: rgba(14, 165, 233, 0.1);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -5,12 +23,13 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f0f4f8;
+  background-color: var(--light-gray);
+  color: var(--dark-gray);
 }
 
 code {
@@ -25,11 +44,12 @@ code {
 }
 
 .card {
-  background: white;
+  background: var(--white);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   padding: 20px;
   margin-bottom: 20px;
+  border-top: 3px solid var(--primary-green);
 }
 
 .btn {
@@ -38,32 +58,34 @@ code {
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.3s;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .btn-primary {
-  background-color: #1e88e5;
-  color: white;
-  font-weight: 500;
+  background-color: var(--primary-green);
+  color: var(--white);
+  font-weight: 600;
 }
 
 .btn-primary:hover {
-  background-color: #1565c0;
-  box-shadow: 0 4px 8px rgba(30, 136, 229, 0.3);
+  background-color: var(--hover-green);
+  box-shadow: 0 4px 12px rgba(120, 171, 66, 0.3);
+  transform: translateY(-2px);
 }
 
 .btn-success {
-  background-color: #28a745;
-  color: white;
+  background-color: var(--primary-green);
+  color: var(--white);
 }
 
 .btn-success:hover {
-  background-color: #218838;
+  background-color: var(--hover-green);
 }
 
 .btn-danger {
   background-color: #dc3545;
-  color: white;
+  color: var(--white);
 }
 
 .btn-danger:hover {
@@ -71,12 +93,12 @@ code {
 }
 
 .btn-secondary {
-  background-color: #6c757d;
-  color: white;
+  background-color: var(--dark-blue);
+  color: var(--white);
 }
 
 .btn-secondary:hover {
-  background-color: #5a6268;
+  background-color: rgba(21, 35, 83, 0.85);
 }
 
 .form-group {
@@ -86,7 +108,8 @@ code {
 .form-group label {
   display: block;
   margin-bottom: 5px;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--dark-blue);
 }
 
 .form-control {
@@ -95,11 +118,13 @@ code {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  transition: border-color 0.3s ease;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #007bff;
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px var(--light-green);
 }
 
 table {
@@ -115,21 +140,22 @@ table td {
 }
 
 table th {
-  background-color: #f8f9fa;
+  background-color: var(--dark-blue);
+  color: var(--white);
   font-weight: 600;
 }
 
 .navbar {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  color: white;
+  background: var(--primary-green);
+  color: var(--white);
   padding: 15px 0;
   margin-bottom: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .top-banner {
-  background-color: #000;
-  color: white;
+  background-color: var(--dark-blue);
+  color: var(--white);
   padding: 10px 0;
   text-align: center;
   font-size: 16px;
@@ -137,13 +163,14 @@ table th {
 }
 
 .top-banner a {
-  color: #4CAF50;
+  color: var(--primary-green);
   text-decoration: none;
   font-weight: bold;
 }
 
 .top-banner a:hover {
   text-decoration: underline;
+  color: var(--white);
 }
 
 .navbar .container {
@@ -155,7 +182,7 @@ table th {
 .navbar-brand {
   font-size: 24px;
   font-weight: bold;
-  color: white;
+  color: var(--white);
   text-decoration: none;
 }
 
@@ -166,21 +193,23 @@ table th {
 }
 
 .navbar-nav a {
-  color: white;
+  color: var(--white);
   text-decoration: none;
   padding: 8px 15px;
   border-radius: 4px;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .navbar-nav a:hover,
 .navbar-nav a.active {
-  background-color: #495057;
+  background-color: var(--dark-blue);
+  transform: translateY(-2px);
 }
 
 .hero {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--dark-blue) 0%, var(--primary-green) 100%);
+  color: var(--white);
   padding: 80px 20px;
   text-align: center;
   border-radius: 0;
@@ -269,7 +298,7 @@ table th {
 .check-icon {
   width: 30px;
   height: 30px;
-  background-color: #4CAF50;
+  background-color: var(--primary-green);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -279,8 +308,8 @@ table th {
 }
 
 .book-now-btn {
-  background-color: #000;
-  color: white;
+  background-color: var(--dark-blue);
+  color: var(--white);
   padding: 15px 40px;
   font-size: 16px;
   font-weight: bold;
@@ -288,11 +317,13 @@ table th {
   border-radius: 4px;
   cursor: pointer;
   margin-top: 30px;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
 }
 
 .book-now-btn:hover {
-  background-color: #333;
+  background-color: rgba(21, 35, 83, 0.85);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(21, 35, 83, 0.4);
 }
 
 .hero h1 {
@@ -313,47 +344,52 @@ table th {
 }
 
 .service-card {
-  background: white;
+  background: var(--white);
   padding: 35px 25px;
   border-radius: 12px;
   box-shadow: 0 3px 10px rgba(0,0,0,0.08);
   text-align: center;
   transition: all 0.3s ease;
-  border-left: 4px solid #1e88e5;
+  border-left: 4px solid var(--primary-green);
+  border-top: 2px solid var(--light-gray);
 }
 
 .service-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 8px 20px rgba(30, 136, 229, 0.2);
+  box-shadow: 0 8px 20px rgba(120, 171, 66, 0.25);
+  border-left-color: var(--dark-blue);
 }
 
 .service-card h3 {
-  color: #1e3c72;
+  color: var(--dark-blue);
   font-size: 18px;
   margin-bottom: 10px;
 }
 
 .service-icon {
   font-size: 48px;
-  color: #1e88e5;
+  color: var(--primary-green);
   margin-bottom: 15px;
 }
 
 .contact-info {
-  background: white;
+  background: var(--white);
   padding: 30px;
   border-radius: 8px;
   text-align: center;
+  border-top: 3px solid var(--primary-green);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .contact-info h2 {
   margin-bottom: 20px;
-  color: #333;
+  color: var(--dark-blue);
 }
 
 .contact-item {
   margin: 15px 0;
   font-size: 18px;
+  color: var(--dark-gray);
 }
 
 .modal {
@@ -362,7 +398,7 @@ table th {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(21, 35, 83, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -370,13 +406,14 @@ table th {
 }
 
 .modal-content {
-  background: white;
+  background: var(--white);
   padding: 30px;
   border-radius: 8px;
   max-width: 600px;
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  border-top: 4px solid var(--primary-green);
 }
 
 .modal-header {
@@ -388,6 +425,7 @@ table th {
 
 .modal-header h2 {
   margin: 0;
+  color: var(--dark-blue);
 }
 
 .close-btn {
@@ -395,32 +433,38 @@ table th {
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: var(--secondary-gray);
+  transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+  color: var(--dark-blue);
 }
 
 .alert {
   padding: 15px;
   border-radius: 4px;
   margin-bottom: 20px;
+  border-left: 4px solid;
 }
 
 .alert-success {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+  background-color: var(--light-green);
+  color: var(--hover-green);
+  border-left-color: var(--primary-green);
 }
 
 .alert-error {
   background-color: #f8d7da;
   color: #721c24;
-  border: 1px solid #f5c6cb;
+  border-left-color: #dc3545;
 }
 
 .loading {
   text-align: center;
   padding: 40px;
   font-size: 18px;
-  color: #666;
+  color: var(--secondary-gray);
 }
 
 /* Responsive Design */

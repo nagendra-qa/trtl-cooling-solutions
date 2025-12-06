@@ -52,9 +52,8 @@ const Navbar = () => {
                 <span style={{
                   fontSize: '11px',
                   opacity: 0.85,
-                  fontWeight: '500',
-                  marginTop: '2px',
-                  fontStyle: 'italic'
+                  fontWeight: 'bold',
+                  marginTop: '2px'
                 }}>
                   Tanish Ram & Tejas Laxman
                 </span>
@@ -73,7 +72,7 @@ const Navbar = () => {
           {/* Public Navigation Links */}
           <ul className="navbar-nav">
             <li><Link to="/" className={location.pathname === '/' ? 'active' : ''}>Home</Link></li>
-            <li><a href="#services">Services</a></li>
+            <li><Link to="/services" className={location.pathname === '/services' ? 'active' : ''}>Services</Link></li>
             <li><a href="#locations">Locations</a></li>
             <li><a href="#contact">Contact Us</a></li>
             <li>
