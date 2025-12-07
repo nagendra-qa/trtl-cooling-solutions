@@ -361,7 +361,6 @@ router.get('/:id/pdf', async (req, res) => {
     // Payment Terms and Bank Details - Side by Side Modern Cards
     currentY += 48;
     const boxHeight = 85;
-    const halfWidth = (contentWidth - 10) / 2;
 
     // Payment Terms Box with colored top
     doc.rect(margin, currentY, halfWidth, 5).fillAndStroke('#0ea5e9', '#0ea5e9');
