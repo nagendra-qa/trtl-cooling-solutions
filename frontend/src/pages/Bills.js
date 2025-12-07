@@ -185,8 +185,8 @@ const Bills = () => {
             <tr>
               <th>Invoice Number</th>
               <th>Invoice Date</th>
-              <th>Customer WO No</th>
-              <th>Customer WO Date</th>
+              <th>WorkOrder No</th>
+              <th>WO Date</th>
               <th>Project</th>
               <th>Reference</th>
               <th>Amount</th>
@@ -274,7 +274,7 @@ const Bills = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div className="form-group">
-                  <label>Customer WO Number</label>
+                  <label>WorkOrder Number</label>
                   <input
                     type="text"
                     name="customerWONumber"
@@ -285,7 +285,7 @@ const Bills = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Customer WO Date</label>
+                  <label>WO Date</label>
                   <input
                     type="date"
                     name="customerWODate"

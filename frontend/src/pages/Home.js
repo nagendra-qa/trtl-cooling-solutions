@@ -32,8 +32,8 @@ const Home = () => {
         'Preventive Maintenance (PPM)': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=250&fit=crop&auto=format&q=70',
         'Gas Charging': '/Images/AC_GasFilling.jpeg',
         'Filter Cleaning & Replacement': 'https://images.unsplash.com/photo-1581578949510-fa7315c4c350?w=400&h=250&fit=crop&auto=format&q=70',
-        'Strainer Cleaning': 'https://images.unsplash.com/photo-1604754742629-3e580a61f696?w=400&h=250&fit=crop&auto=format&q=70',
-        'Chemical Cleaning': 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=400&h=250&fit=crop&auto=format&q=70',
+        'Strainer Cleaning': '/Images/Strainer_Cleaning.jpeg',
+        'Chemical Cleaning': '/Images/Chemical_Cleaning.jpeg',
         'Compressor Repair': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=250&fit=crop&auto=format&q=70',
         '24/7 Emergency Services': 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=250&fit=crop&auto=format&q=70'
     };

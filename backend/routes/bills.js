@@ -125,7 +125,7 @@ router.get('/:id/pdf', async (req, res) => {
     }
 
     // Create PDF
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
 
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -133,153 +133,199 @@ router.get('/:id/pdf', async (req, res) => {
 
     doc.pipe(res);
 
-    // Company Header
-    doc.fontSize(14).font('Helvetica-Bold').text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', 40, 40);
+    const pageWidth = 595.28; // A4 width in points
+    const margin = 50;
+    const contentWidth = pageWidth - (margin * 2);
+
+    // Header Box with Company Details
+    doc.rect(margin, margin, contentWidth, 70).stroke();
+
+    // Company Name
+    doc.fontSize(16).font('Helvetica-Bold')
+       .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin + 15, margin + 15);
+
+    // Company Details
     doc.fontSize(9).font('Helvetica');
-    doc.text(`Pan: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}  Mob: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, 40, doc.y + 5);
-    doc.text(process.env.COMPANY_BILL_ADDRESS || 'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150', 40, doc.y + 3);
+    doc.text(`PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`, margin + 15, doc.y + 5);
+    doc.text(`Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin + 15, doc.y + 3);
+    doc.text(process.env.COMPANY_BILL_ADDRESS || 'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',
+             margin + 15, doc.y + 3, { width: contentWidth - 30 });
 
-    doc.moveDown(0.5);
-    doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke();
-    doc.moveDown(0.5);
+    // Tax Invoice Title (Centered)
+    doc.fontSize(18).font('Helvetica-Bold')
+       .text('TAX INVOICE', margin, margin + 90, { width: contentWidth, align: 'center' });
 
-    // Invoice Number and Date
-    const invoiceY = doc.y;
+    // Invoice Details Box
+    let currentY = margin + 120;
+    doc.rect(margin, currentY, contentWidth, 50).stroke();
+
+    // Left side - Invoice number and date
     doc.fontSize(10).font('Helvetica-Bold');
-    doc.text(`Invoice No: ${bill.billNumber}`, 40, invoiceY);
-    doc.text(`Date: ${new Date(bill.billDate).toLocaleDateString('en-GB')}`, 400, invoiceY);
+    doc.text('Invoice No:', margin + 15, currentY + 10);
+    doc.font('Helvetica').text(bill.billNumber, margin + 90, currentY + 10);
 
-    doc.moveDown(1);
+    doc.font('Helvetica-Bold').text('Invoice Date:', margin + 15, currentY + 25);
+    doc.font('Helvetica').text(new Date(bill.billDate).toLocaleDateString('en-GB'), margin + 90, currentY + 25);
 
-    // Bill To Address
-    doc.fontSize(10).font('Helvetica-Bold').text('Bill To Address:', 40, doc.y);
+    // Right side - WO details
+    if (bill.customerWONumber) {
+      doc.font('Helvetica-Bold').text('WorkOrder NO:', margin + 280, currentY + 10);
+      doc.font('Helvetica').text(bill.customerWONumber, margin + 370, currentY + 10);
+    }
+
+    if (bill.customerWODate) {
+      doc.font('Helvetica-Bold').text('WO Date:', margin + 280, currentY + 25);
+      doc.font('Helvetica').text(new Date(bill.customerWODate).toLocaleDateString('en-GB'), margin + 370, currentY + 25);
+    }
+
+    // Bill To Section
+    currentY += 65;
+    doc.fontSize(11).font('Helvetica-Bold')
+       .text('BILL TO:', margin, currentY);
+
+    currentY += 5;
+    doc.rect(margin, currentY, contentWidth, 70).stroke();
+
+    // Default billing address
+    doc.fontSize(10).font('Helvetica-Bold');
+    doc.text('VK Building Services Pvt Ltd', margin + 10, currentY + 10);
     doc.font('Helvetica').fontSize(9);
-    const billToY = doc.y;
+    doc.text('1st Floor Krishe Sapphire, Sri Krishna Developers,', margin + 10, doc.y + 3);
+    doc.text('Sy No 88 Opp Vishal Peripherals, Madhapur', margin + 10, doc.y + 3);
+    doc.text('Telangana, Hyderabad 500081', margin + 10, doc.y + 3);
+    doc.font('Helvetica-Bold').text('GSTIN / PAN: ', margin + 10, doc.y + 3, { continued: true });
+    doc.font('Helvetica').text('36AADCV1173D1ZL');
 
-    // Handle manual bills (no customer reference)
-    if (bill.customer) {
-      doc.text(bill.customer.name, 40, billToY, { width: 250 });
-      doc.text(bill.customer.address, 40, doc.y + 2, { width: 250 });
-      if (bill.customer.gstNumber) {
-        doc.text(`GSTIN / PAN: ${bill.customer.gstNumber}`, 40, doc.y + 2);
+    // Project Details (if available)
+    currentY += 85;
+    if (bill.projectName || bill.referenceNo) {
+      doc.fontSize(9).font('Helvetica');
+      if (bill.projectName) {
+        doc.font('Helvetica-Bold').text('Project: ', margin, currentY);
+        doc.font('Helvetica').text(bill.projectName, margin + 50, currentY);
+        currentY += 15;
+      }
+      if (bill.referenceNo) {
+        doc.font('Helvetica-Bold').text('Reference: ', margin, currentY);
+        doc.font('Helvetica').text(bill.referenceNo, margin + 50, currentY);
+        currentY += 20;
       }
     } else {
-      // For manually entered bills, show project name or placeholder
-      doc.text(bill.projectName || 'Customer Details Not Available', 40, billToY, { width: 250 });
+      currentY += 10;
     }
 
-    doc.moveDown(1);
+    // Items Table
+    const tableTop = currentY;
 
-    // Work Order Details
-    if (bill.customerWONumber) {
-      const woY = doc.y;
-      doc.fontSize(9).font('Helvetica');
-      doc.text(`Customer WO No: ${bill.customerWONumber}`, 40, woY);
-      if (bill.customerWODate) {
-        doc.text(`Dated: ${new Date(bill.customerWODate).toLocaleDateString('en-GB')}`, 400, woY);
-      }
-      doc.moveDown(0.5);
-    }
+    // Table Header Background
+    doc.rect(margin, tableTop, contentWidth, 20).fillAndStroke('#e8e8e8', '#000000');
 
-    // Project Details
-    if (bill.projectName) {
-      doc.text(`Project: ${bill.projectName}`, 40, doc.y);
-      doc.moveDown(0.3);
-    }
-    if (bill.referenceNo) {
-      doc.text(`Reference: ${bill.referenceNo}`, 40, doc.y);
-      doc.moveDown(0.5);
-    }
-
-    doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke();
-    doc.moveDown(0.5);
-
-    // Table Header
-    const tableTop = doc.y;
-    doc.fontSize(9).font('Helvetica-Bold');
-    doc.text('SL No', 40, tableTop);
-    doc.text('Description', 80, tableTop);
-    doc.text('SAC Code', 260, tableTop);
-    doc.text('Unit', 320, tableTop);
-    doc.text('Qty', 360, tableTop);
-    doc.text('Rate', 410, tableTop, { width: 70, align: 'right' });
-    doc.text('Amount', 485, tableTop, { width: 70, align: 'right' });
-
-    doc.moveTo(40, doc.y + 5).lineTo(555, doc.y + 5).stroke();
+    // Table Headers
+    doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold');
+    doc.text('Sl.', margin + 5, tableTop + 6, { width: 25 });
+    doc.text('Description of Services', margin + 35, tableTop + 6, { width: 180 });
+    doc.text('SAC', margin + 220, tableTop + 6, { width: 50, align: 'center' });
+    doc.text('Unit', margin + 275, tableTop + 6, { width: 35, align: 'center' });
+    doc.text('Qty', margin + 315, tableTop + 6, { width: 40, align: 'right' });
+    doc.text('Rate (₹)', margin + 360, tableTop + 6, { width: 70, align: 'right' });
+    doc.text('Amount (₹)', margin + 435, tableTop + 6, { width: 60, align: 'right' });
 
     // Table Items
-    let yPosition = doc.y + 10;
+    let itemY = tableTop + 25;
     doc.font('Helvetica').fontSize(9);
 
     bill.items.forEach((item, index) => {
-      const itemStartY = yPosition;
-
       // Check if we need a new page
-      if (yPosition > 700) {
+      if (itemY > 700) {
         doc.addPage();
-        yPosition = 40;
+        itemY = 50;
       }
 
-      doc.text((index + 1).toString(), 40, yPosition);
+      const rowHeight = Math.max(20, doc.heightOfString(item.description, { width: 175 }) + 10);
 
-      // Description (wrapped text)
-      const descLines = doc.heightOfString(item.description, { width: 170 });
-      doc.text(item.description, 80, yPosition, { width: 170 });
+      // Draw row border
+      doc.rect(margin, itemY, contentWidth, rowHeight).stroke();
 
-      doc.text(item.sacCode || '', 260, yPosition);
-      doc.text(item.unit || 'EA', 320, yPosition);
-      doc.text(item.quantity ? item.quantity.toFixed(2) : '0.00', 360, yPosition);
-      doc.text(item.rate ? item.rate.toFixed(2) : '0.00', 410, yPosition, { width: 70, align: 'right' });
-      doc.text(item.amount ? item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00', 485, yPosition, { width: 70, align: 'right' });
+      // Vertical lines
+      doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + rowHeight).stroke();
+      doc.moveTo(margin + 215, itemY).lineTo(margin + 215, itemY + rowHeight).stroke();
+      doc.moveTo(margin + 270, itemY).lineTo(margin + 270, itemY + rowHeight).stroke();
+      doc.moveTo(margin + 310, itemY).lineTo(margin + 310, itemY + rowHeight).stroke();
+      doc.moveTo(margin + 355, itemY).lineTo(margin + 355, itemY + rowHeight).stroke();
+      doc.moveTo(margin + 430, itemY).lineTo(margin + 430, itemY + rowHeight).stroke();
 
-      yPosition = Math.max(itemStartY + descLines, yPosition) + 20;
+      // Item data
+      doc.text((index + 1).toString(), margin + 10, itemY + 5, { width: 20, align: 'center' });
+      doc.text(item.description, margin + 35, itemY + 5, { width: 175 });
+      doc.text(item.sacCode || '', margin + 220, itemY + 5, { width: 50, align: 'center' });
+      doc.text(item.unit || 'EA', margin + 275, itemY + 5, { width: 35, align: 'center' });
+      doc.text(item.quantity ? item.quantity.toFixed(2) : '0.00', margin + 315, itemY + 5, { width: 40, align: 'right' });
+      doc.text(item.rate ? item.rate.toFixed(2) : '0.00', margin + 360, itemY + 5, { width: 70, align: 'right' });
+      doc.text(item.amount ? item.amount.toFixed(2) : '0.00', margin + 435, itemY + 5, { width: 60, align: 'right' });
+
+      itemY += rowHeight;
     });
 
     // Totals Section
-    doc.moveTo(40, yPosition).lineTo(555, yPosition).stroke();
-    yPosition += 10;
+    const totalsY = itemY;
+
+    // Total Amount Row
+    doc.rect(margin, totalsY, contentWidth, 20).stroke();
+    doc.moveTo(margin + 355, totalsY).lineTo(margin + 355, totalsY + 20).stroke();
+    doc.moveTo(margin + 430, totalsY).lineTo(margin + 430, totalsY + 20).stroke();
 
     doc.fontSize(10).font('Helvetica-Bold');
-    doc.text('Total Amount', 410, yPosition, { align: 'right' });
-    doc.text(bill.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 485, yPosition, { width: 70, align: 'right' });
-    yPosition += 15;
+    doc.text('Total Amount', margin + 220, totalsY + 6, { width: 130, align: 'right' });
+    doc.text('₹ ' + bill.totalAmount.toFixed(2), margin + 435, totalsY + 6, { width: 60, align: 'right' });
 
-    if (bill.roundUp && bill.roundUp !== 0) {
-      doc.font('Helvetica').fontSize(9);
-      doc.text('Round Up', 410, yPosition, { align: 'right' });
-      doc.text(bill.roundUp.toFixed(2), 485, yPosition, { width: 70, align: 'right' });
-      yPosition += 15;
-    }
+    // Grand Total Row
+    let grandTotalY = totalsY + 20;
+    doc.rect(margin, grandTotalY, contentWidth, 25).fillAndStroke('#f0f0f0', '#000000');
+    doc.moveTo(margin + 355, grandTotalY).lineTo(margin + 355, grandTotalY + 25).stroke();
+    doc.moveTo(margin + 430, grandTotalY).lineTo(margin + 430, grandTotalY + 25).stroke();
 
-    doc.fontSize(11).font('Helvetica-Bold');
-    doc.text('Grand Total', 410, yPosition, { align: 'right' });
-    doc.text(bill.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 485, yPosition, { width: 70, align: 'right' });
-
-    yPosition += 20;
+    doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold');
+    doc.text('GRAND TOTAL', margin + 220, grandTotalY + 8, { width: 130, align: 'right' });
+    doc.text('₹ ' + bill.grandTotal.toFixed(2), margin + 435, grandTotalY + 8, { width: 60, align: 'right' });
 
     // Amount in Words
+    grandTotalY += 35;
     doc.fontSize(10).font('Helvetica-Bold');
-    doc.text('Rupees in Words:', 40, yPosition);
-    doc.font('Helvetica').fontSize(9);
-    doc.text(bill.amountInWords || '', 40, yPosition + 15, { width: 350 });
+    doc.text('Amount in Words:', margin, grandTotalY);
+    doc.font('Helvetica-Oblique').fontSize(10);
+    doc.text(bill.amountInWords || 'Amount not specified', margin, grandTotalY + 15, { width: contentWidth });
 
-    yPosition += 45;
-    doc.moveTo(40, yPosition).lineTo(555, yPosition).stroke();
-    yPosition += 10;
+    // Payment Terms and Bank Details Box
+    grandTotalY += 50;
+    doc.rect(margin, grandTotalY, contentWidth / 2 - 5, 80).stroke();
+    doc.rect(margin + contentWidth / 2 + 5, grandTotalY, contentWidth / 2 - 5, 80).stroke();
 
-    // Payment Terms
-    doc.fontSize(10).font('Helvetica-Bold').text('Payment Terms', 40, yPosition);
-    doc.font('Helvetica').fontSize(9);
-    doc.text(bill.paymentTerms || process.env.PAYMENT_TERMS || '30 Days credit', 40, yPosition + 15);
+    // Payment Terms (Left Box)
+    doc.fontSize(10).font('Helvetica-Bold')
+       .text('Payment Terms', margin + 10, grandTotalY + 10);
+    doc.fontSize(9).font('Helvetica')
+       .text(bill.paymentTerms || process.env.PAYMENT_TERMS || '30 Days credit',
+             margin + 10, grandTotalY + 25, { width: contentWidth / 2 - 25 });
 
-    // Bank Details
-    yPosition += 40;
-    doc.fontSize(10).font('Helvetica-Bold').text('Our Bank Details', 40, yPosition);
-    doc.font('Helvetica').fontSize(9);
-    doc.text(`Account Name: ${process.env.BANK_ACCOUNT_NAME || 'M Picheswara Rao'}`, 40, yPosition + 15);
-    doc.text(`Account No: ${process.env.BANK_ACCOUNT_NO || '782701505244'}`, 40, yPosition + 28);
-    doc.text(`IFSC Code: ${process.env.BANK_IFSC || 'ICIC0007827'}`, 40, yPosition + 41);
-    doc.text(`Branch: ${process.env.BANK_BRANCH || 'Salarpuria Sattva'}`, 40, yPosition + 54);
+    // Bank Details (Right Box)
+    doc.fontSize(10).font('Helvetica-Bold')
+       .text('Bank Details', margin + contentWidth / 2 + 15, grandTotalY + 10);
+    doc.fontSize(9).font('Helvetica');
+    doc.text(`Account Name: ${process.env.BANK_ACCOUNT_NAME || 'M Picheswara Rao'}`,
+             margin + contentWidth / 2 + 15, grandTotalY + 25);
+    doc.text(`Account No: ${process.env.BANK_ACCOUNT_NO || '782701505244'}`,
+             margin + contentWidth / 2 + 15, doc.y + 3);
+    doc.text(`IFSC Code: ${process.env.BANK_IFSC || 'ICIC0007827'}`,
+             margin + contentWidth / 2 + 15, doc.y + 3);
+    doc.text(`Branch: ${process.env.BANK_BRANCH || 'Salarpuria Sattva'}`,
+             margin + contentWidth / 2 + 15, doc.y + 3);
+
+    // Signature
+    const signatureY = grandTotalY + 100;
+    doc.fontSize(9).font('Helvetica-Bold')
+       .text('For ' + (process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO'),
+             margin + contentWidth - 150, signatureY, { width: 150, align: 'right' });
+    doc.text('Authorized Signatory', margin + contentWidth - 150, signatureY + 40, { width: 150, align: 'right' });
 
     doc.end();
   } catch (error) {

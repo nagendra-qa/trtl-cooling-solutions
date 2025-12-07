@@ -164,7 +164,7 @@ const Services = () => {
     {
       id: 9,
       name: 'Gas Charging',
-      image: 'https://images.unsplash.com/photo-1635405074683-96d6921a9a0f?w=400&h=250&fit=crop&auto=format&q=70',
+      image: '/Images/AC_GasFilling.jpeg',
       description: 'Professional refrigerant gas charging services for all types of AC systems.',
       services: ['Leak detection', 'Gas recovery', 'Vacuum testing', 'Gas charging', 'Leak repair']
     },
