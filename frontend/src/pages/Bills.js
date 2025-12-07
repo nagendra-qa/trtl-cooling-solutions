@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { billsAPI, workOrdersAPI } from '../services/api';
+import { billsAPI } from '../services/api';
 
 const Bills = () => {
   const [bills, setBills] = useState([]);
-  const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     billNumber: '',
-    workOrder: '',
     billDate: new Date().toISOString().split('T')[0],
     customerWONumber: '',
     customerWODate: '',
@@ -23,7 +21,6 @@ const Bills = () => {
 
   useEffect(() => {
     fetchBills();
-    fetchWorkOrders();
   }, []);
 
   const fetchBills = async () => {
@@ -34,15 +31,6 @@ const Bills = () => {
       showMessage('error', 'Error fetching bills');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchWorkOrders = async () => {
-    try {
-      const response = await workOrdersAPI.getAll();
-      setWorkOrders(response.data);
-    } catch (error) {
-      console.error('Error fetching work orders:', error);
     }
   };
 
@@ -93,25 +81,6 @@ const Bills = () => {
   const removeItem = (index) => {
     const newItems = formData.items.filter((_, i) => i !== index);
     setFormData({ ...formData, items: newItems });
-  };
-
-  const handleWorkOrderSelect = (woId) => {
-    const selectedWO = workOrders.find(wo => wo._id === woId);
-    if (selectedWO) {
-      const items = selectedWO.services && selectedWO.services.length > 0
-        ? selectedWO.services
-        : [{ description: '', sacCode: '', unit: 'EA', quantity: 1, rate: 0, amount: 0 }];
-
-      setFormData({
-        ...formData,
-        workOrder: woId,
-        customerWONumber: selectedWO.workOrderNumber,
-        customerWODate: selectedWO.serviceDate ? new Date(selectedWO.serviceDate).toISOString().split('T')[0] : '',
-        projectName: selectedWO.projectName || '',
-        referenceNo: selectedWO.referenceNo || '',
-        items: items
-      });
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -172,7 +141,6 @@ const Bills = () => {
   const resetForm = () => {
     setFormData({
       billNumber: '',
-      workOrder: '',
       billDate: new Date().toISOString().split('T')[0],
       customerWONumber: '',
       customerWODate: '',
@@ -297,23 +265,6 @@ const Bills = () => {
                     required
                   />
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Select Work Order (Auto-fills details)</label>
-                <select
-                  name="workOrder"
-                  className="form-control"
-                  value={formData.workOrder}
-                  onChange={(e) => handleWorkOrderSelect(e.target.value)}
-                >
-                  <option value="">Select Work Order (Optional)</option>
-                  {workOrders.map((wo) => (
-                    <option key={wo._id} value={wo._id}>
-                      WO#{wo.workOrderNumber} - {wo.projectName || 'N/A'}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
