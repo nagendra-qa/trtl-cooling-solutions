@@ -155,10 +155,17 @@ router.get('/:id/pdf', async (req, res) => {
     doc.fontSize(10).font('Helvetica-Bold').text('Bill To Address:', 40, doc.y);
     doc.font('Helvetica').fontSize(9);
     const billToY = doc.y;
-    doc.text(bill.customer.name, 40, billToY, { width: 250 });
-    doc.text(bill.customer.address, 40, doc.y + 2, { width: 250 });
-    if (bill.customer.gstNumber) {
-      doc.text(`GSTIN / PAN: ${bill.customer.gstNumber}`, 40, doc.y + 2);
+
+    // Handle manual bills (no customer reference)
+    if (bill.customer) {
+      doc.text(bill.customer.name, 40, billToY, { width: 250 });
+      doc.text(bill.customer.address, 40, doc.y + 2, { width: 250 });
+      if (bill.customer.gstNumber) {
+        doc.text(`GSTIN / PAN: ${bill.customer.gstNumber}`, 40, doc.y + 2);
+      }
+    } else {
+      // For manually entered bills, show project name or placeholder
+      doc.text(bill.projectName || 'Customer Details Not Available', 40, billToY, { width: 250 });
     }
 
     doc.moveDown(1);
