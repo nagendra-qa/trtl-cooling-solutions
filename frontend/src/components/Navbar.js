@@ -23,37 +23,39 @@ const Navbar = () => {
       <nav className="navbar">
         <div className="container">
           <Link to="/" className="navbar-brand">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               {/* Professional Logo Image */}
               <img
                 src="/Images/Logo.jpeg"
                 alt="TRTL Cooling Solutions - Tanish Ram & Tejas Laxman"
                 style={{
-                  width: '70px',
-                  height: '70px',
+                  width: '90px',
+                  height: '90px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                  border: '3px solid rgba(255,255,255,0.3)'
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.3)',
+                  border: '4px solid rgba(255,255,255,0.9)'
                 }}
               />
 
               {/* Company Name and Tagline */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <span style={{
-                  fontSize: '20px',
+                  fontSize: '26px',
                   fontWeight: 'bold',
-                  letterSpacing: '1.5px',
+                  letterSpacing: '2px',
                   textTransform: 'uppercase',
-                  lineHeight: '1.2'
+                  lineHeight: '1.2',
+                  color: '#ffffff'
                 }}>
-                  TRTL Cooling Solutions
+                  TRTL COOLING SOLUTIONS
                 </span>
                 <span style={{
-                  fontSize: '11px',
-                  opacity: 0.85,
-                  fontWeight: 'bold',
-                  marginTop: '2px'
+                  fontSize: '13px',
+                  opacity: 0.95,
+                  fontWeight: '500',
+                  marginTop: '4px',
+                  color: '#ffffff'
                 }}>
                   Tanish Ram & Tejas Laxman
                 </span>

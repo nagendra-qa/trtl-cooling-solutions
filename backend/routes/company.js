@@ -27,7 +27,6 @@ router.get('/', (req, res) => {
       'AC Repair & Maintenance',
       'Preventive Maintenance (PPM)',
       'Gas Charging',
-      'Filter Cleaning & Replacement',
       'Strainer Cleaning',
       'Chemical Cleaning',
       'Compressor Repair',

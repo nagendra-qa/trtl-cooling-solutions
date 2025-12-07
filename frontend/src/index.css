@@ -146,11 +146,11 @@ table th {
 }
 
 .navbar {
-  background: var(--primary-green);
+  background: linear-gradient(135deg, #0c4a6e 0%, #0ea5e9 100%);
   color: var(--white);
-  padding: 15px 0;
+  padding: 20px 0;
   margin-bottom: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .top-banner {
@@ -195,16 +195,18 @@ table th {
 .navbar-nav a {
   color: var(--white);
   text-decoration: none;
-  padding: 8px 15px;
-  border-radius: 4px;
+  padding: 10px 18px;
+  border-radius: 6px;
   transition: all 0.3s ease;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 16px;
 }
 
 .navbar-nav a:hover,
 .navbar-nav a.active {
-  background-color: var(--dark-blue);
+  background-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .hero {

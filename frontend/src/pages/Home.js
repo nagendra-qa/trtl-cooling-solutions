@@ -28,13 +28,13 @@ const Home = () => {
         'VRF AC': '/Images/VRF_AC.jpeg',
         'AHU AC': '/Images/AHU_AC.jpeg',
         'AC Installation': '/Images/AC_Installation.jpeg',
-        'AC Repair & Maintenance': 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400&h=250&fit=crop&auto=format&q=70',
-        'Preventive Maintenance (PPM)': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=250&fit=crop&auto=format&q=70',
+        'AC Repair & Maintenance': '/Images/AC Repair & Maintenance.jpg',
+        'Preventive Maintenance (PPM)': '/Images/Preventive Maintenance (PPM).jpeg',
         'Gas Charging': '/Images/AC_GasFilling.jpeg',
         'Strainer Cleaning': '/Images/Strainer_Cleaning.jpeg',
         'Chemical Cleaning': '/Images/Chemical_Cleaning.jpeg',
-        'Compressor Repair': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=250&fit=crop&auto=format&q=70',
-        '24/7 Emergency Services': 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=250&fit=crop&auto=format&q=70'
+        'Compressor Repair': '/Images/Compressor Repair.jpeg',
+        '24/7 Emergency Services': '/Images/Emergency Services.jpeg'
     };
 
     if (loading) {

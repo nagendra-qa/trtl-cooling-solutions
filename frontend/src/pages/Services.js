@@ -150,14 +150,14 @@ const Services = () => {
     {
       id: 7,
       name: 'AC Repair & Maintenance',
-      image: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400&h=250&fit=crop&auto=format&q=70',
+      image: '/Images/AC Repair & Maintenance.jpg',
       description: 'Comprehensive repair and maintenance services to keep your AC running efficiently year-round.',
       services: ['Complete diagnosis', 'Part replacement', 'Performance testing', 'System optimization', 'Emergency repairs']
     },
     {
       id: 8,
       name: 'Preventive Maintenance (PPM)',
-      image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=250&fit=crop&auto=format&q=70',
+      image: '/Images/Preventive Maintenance (PPM).jpeg',
       description: 'Regular preventive maintenance to ensure optimal performance and extend the life of your AC system.',
       services: ['Scheduled maintenance', 'Performance monitoring', 'Early fault detection', 'Extended equipment life', 'Priority service']
     },
@@ -171,7 +171,7 @@ const Services = () => {
     {
       id: 10,
       name: '24/7 Emergency Services',
-      image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=250&fit=crop&auto=format&q=70',
+      image: '/Images/Emergency Services.jpeg',
       description: 'Round-the-clock emergency AC repair services to handle urgent cooling needs.',
       services: ['24/7 availability', 'Fast response time', 'Emergency repairs', 'Temporary cooling solutions', 'Priority scheduling']
     }
