@@ -222,15 +222,15 @@ router.get('/:id/pdf', async (req, res) => {
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
       doc.text('PROJECT:', margin + halfWidth + 25, rightY);
       doc.font('Helvetica').fillColor('#000000');
-      doc.text(bill.projectName, margin + halfWidth + 25, rightY + 14, { width: halfWidth - 30 });
-      rightY += 40;
+      doc.text(bill.projectName, margin + halfWidth + 75, rightY, { width: halfWidth - 80 });
+      rightY += 30;
     }
 
     if (bill.referenceNo) {
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
       doc.text('REFERENCE:', margin + halfWidth + 25, rightY);
       doc.font('Helvetica').fillColor('#000000');
-      doc.text(bill.referenceNo, margin + halfWidth + 80, rightY);
+      doc.text(bill.referenceNo, margin + halfWidth + 88, rightY);
     }
 
     currentY += 110;
@@ -305,23 +305,47 @@ router.get('/:id/pdf', async (req, res) => {
       itemY += rowHeight;
     });
 
-    // Add blank row for comments
-    const commentsRowHeight = 40;
-    doc.rect(margin, itemY, contentWidth, commentsRowHeight).fillAndStroke('#fffbeb', '#cbd5e1');
+    // Add blank row for comments - More prominent
+    const commentsRowHeight = 50;
+    doc.rect(margin, itemY, contentWidth, commentsRowHeight).fillAndStroke('#fef3c7', '#cbd5e1');
 
+    // Draw vertical line after No. column
     doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
 
-    doc.fontSize(9).font('Helvetica-Oblique').fillColor('#92400e');
-    doc.text('Comments / Notes:', col2, itemY + 15, { width: contentWidth - 70 });
+    // Draw all column lines for comments row
+    doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + commentsRowHeight).stroke();
+    doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + commentsRowHeight).stroke();
+    doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + commentsRowHeight).stroke();
+    doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + commentsRowHeight).stroke();
+
+    // Display the notes/comments if provided
+    if (bill.notes && bill.notes.trim() !== '') {
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#92400e');
+      doc.text('Comments / Notes:', col2, itemY + 8, { width: 240 });
+      doc.fontSize(9).font('Helvetica').fillColor('#000000');
+      doc.text(bill.notes, col2, itemY + 22, { width: contentWidth - 75 });
+    } else {
+      // Show placeholder if no notes
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#92400e');
+      doc.text('Comments / Notes:', col2, itemY + 10, { width: 240 });
+      doc.fontSize(8).font('Helvetica-Oblique').fillColor('#78716c');
+      doc.text('(Space for additional remarks or instructions)', col2, itemY + 26, { width: 240 });
+    }
 
     itemY += commentsRowHeight;
 
+    // Calculate totals with automatic rounding
+    const totalAmount = bill.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const roundedTotal = Math.round(totalAmount);
+    const calculatedRoundOff = roundedTotal - totalAmount;
+
+    // Use database roundUp if provided, otherwise use calculated
+    const roundUp = bill.roundUp !== undefined ? bill.roundUp : calculatedRoundOff;
+    const grandTotal = totalAmount + roundUp;
+    const hasRoundOff = Math.abs(roundUp) >= 0.01;
+
     // Totals Section - Simple & Clean
     const totalsY = itemY;
-    const roundUp = bill.roundUp || 0;
-    const hasRoundOff = roundUp !== 0;
-
-    // Grand Total Row
     let grandTotalY = totalsY;
 
     if (hasRoundOff) {
@@ -329,14 +353,15 @@ router.get('/:id/pdf', async (req, res) => {
       doc.rect(margin, totalsY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
       doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
       doc.text('Total Amount:', margin + 320, totalsY + 7);
-      doc.text('Rs. ' + bill.totalAmount.toFixed(2), margin + 420, totalsY + 7, { width: 95, align: 'right' });
+      doc.text('Rs. ' + totalAmount.toFixed(2), margin + 420, totalsY + 7, { width: 95, align: 'right' });
 
       // Show Round Off
       const roundOffY = totalsY + 24;
       doc.rect(margin, roundOffY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
       doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
       doc.text('Round Off:', margin + 320, roundOffY + 7);
-      doc.text('Rs. ' + roundUp.toFixed(2), margin + 420, roundOffY + 7, { width: 95, align: 'right' });
+      const roundOffSign = roundUp >= 0 ? '+' : '';
+      doc.text('Rs. ' + roundOffSign + roundUp.toFixed(2), margin + 420, roundOffY + 7, { width: 95, align: 'right' });
 
       grandTotalY = roundOffY + 24;
     }
@@ -346,15 +371,18 @@ router.get('/:id/pdf', async (req, res) => {
     doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
     doc.text('GRAND TOTAL:', margin + 320, grandTotalY + 9);
     doc.fontSize(12).font('Helvetica-Bold');
-    doc.text('Rs. ' + bill.grandTotal.toFixed(2), margin + 420, grandTotalY + 9, { width: 95, align: 'right' });
+    doc.text('Rs. ' + grandTotal.toFixed(2), margin + 420, grandTotalY + 9, { width: 95, align: 'right' });
 
-    // Amount in Words
+    // Amount in Words - Use calculated grand total
     currentY = grandTotalY + 40;
     doc.rect(margin, currentY, contentWidth, 32).fillAndStroke('#f8fafc', '#cbd5e1');
     doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155')
        .text('Amount in Words:', margin + 10, currentY + 8);
+
+    // Calculate amount in words from the actual grand total
+    const amountInWords = numberToWords(Math.round(grandTotal));
     doc.fontSize(9).font('Helvetica').fillColor('#000000')
-       .text(bill.amountInWords || 'Amount not specified', margin + 10, currentY + 19, { width: contentWidth - 20 });
+       .text(amountInWords, margin + 10, currentY + 19, { width: contentWidth - 20 });
 
     // Payment Terms and Bank Details
     currentY += 42;
