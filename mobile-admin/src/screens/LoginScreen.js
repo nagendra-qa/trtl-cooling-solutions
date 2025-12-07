@@ -40,13 +40,15 @@ export default function LoginScreen({ navigation }) {
 
       if (response.data.token) {
         await AsyncStorage.setItem('adminToken', response.data.token);
-        await AsyncStorage.setItem('adminUser', JSON.stringify(response.data.user));
+        // Backend returns 'admin' not 'user'
+        await AsyncStorage.setItem('adminUser', JSON.stringify(response.data.admin));
         navigation.replace('Dashboard');
       }
     } catch (error) {
+      console.error('Login error:', error);
       Alert.alert(
         'Login Failed',
-        error.response?.data?.message || 'Invalid credentials'
+        error.response?.data?.message || 'Invalid credentials. Please check your username and password.'
       );
     } finally {
       setLoading(false);
