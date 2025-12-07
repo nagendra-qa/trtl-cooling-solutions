@@ -124,8 +124,8 @@ router.get('/:id/pdf', async (req, res) => {
       return res.status(404).json({ message: 'Bill not found' });
     }
 
-    // Create PDF with professional corporate design
-    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    // Create PDF with clean professional design
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
 
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -134,147 +134,141 @@ router.get('/:id/pdf', async (req, res) => {
     doc.pipe(res);
 
     const pageWidth = 595.28;
-    const margin = 50;
+    const margin = 40;
     const contentWidth = pageWidth - (margin * 2);
 
     // Helper function to draw box
-    const drawBox = (x, y, width, height) => {
-      doc.rect(x, y, width, height).stroke();
+    const drawBox = (x, y, width, height, color = '#000000') => {
+      doc.strokeColor(color).lineWidth(1).rect(x, y, width, height).stroke();
     };
 
-    // Modern Header with Company Details
-    // Top colored bar
-    doc.rect(margin, margin, contentWidth, 8).fillAndStroke('#0ea5e9', '#0ea5e9');
+    // Company Header - Simple & Clean
+    doc.fontSize(22).font('Helvetica-Bold').fillColor('#2563eb')
+       .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin, margin);
 
-    // Company header box
-    drawBox(margin, margin + 8, contentWidth, 90);
-
-    doc.fontSize(24).font('Helvetica-Bold').fillColor('#0c4a6e')
-       .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin + 15, margin + 25);
-
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text(`PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`, margin + 15, margin + 55);
-    doc.text(`Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin + 200, margin + 55);
-
+    doc.fontSize(9).font('Helvetica').fillColor('#666666');
+    let headerY = margin + 28;
+    doc.text(`PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`, margin, headerY);
+    doc.text(`Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin + 180, headerY);
     doc.text(process.env.COMPANY_BILL_ADDRESS || 'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',
-             margin + 15, margin + 70, { width: contentWidth - 30 });
+             margin, headerY + 14, { width: contentWidth });
 
-    // INVOICE Title - Modern Style
-    let currentY = margin + 115;
-    doc.rect(margin, currentY, contentWidth, 35).fillAndStroke('#0c4a6e', '#0c4a6e');
-    doc.fontSize(26).font('Helvetica-Bold').fillColor('#FFFFFF')
-       .text('INVOICE', margin, currentY + 8, { width: contentWidth, align: 'center' });
+    // Horizontal line separator
+    doc.strokeColor('#2563eb').lineWidth(2)
+       .moveTo(margin, headerY + 35).lineTo(margin + contentWidth, headerY + 35).stroke();
 
-    // Row 1: Invoice Details (Left) & Work Order Details (Right)
-    currentY += 50;
-    const halfWidth = (contentWidth - 10) / 2;
+    // INVOICE Title
+    let currentY = headerY + 50;
+    doc.fontSize(20).font('Helvetica-Bold').fillColor('#1e40af')
+       .text('INVOICE', margin, currentY);
 
-    // Left Box: Invoice Number & Date
-    drawBox(margin, currentY, halfWidth, 50);
+    currentY += 35;
+    const halfWidth = (contentWidth - 15) / 2;
 
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e');
-    doc.text('INVOICE NUMBER: ', margin + 15, currentY + 12, { continued: true });
+    // Invoice Details Section - Simple Boxes
+    // Left: Invoice Info
+    drawBox(margin, currentY, halfWidth, 50, '#cbd5e1');
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
+    doc.text('INVOICE NUMBER:', margin + 10, currentY + 12);
     doc.font('Helvetica').fillColor('#000000');
-    doc.text(bill.billNumber);
+    doc.text(bill.billNumber, margin + 100, currentY + 12);
 
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e');
-    doc.text('INVOICE DATE: ', margin + 15, currentY + 28, { continued: true });
+    doc.font('Helvetica-Bold').fillColor('#334155');
+    doc.text('INVOICE DATE:', margin + 10, currentY + 28);
     doc.font('Helvetica').fillColor('#000000');
-    doc.text(new Date(bill.billDate).toLocaleDateString('en-GB'));
+    doc.text(new Date(bill.billDate).toLocaleDateString('en-GB'), margin + 100, currentY + 28);
 
-    // Right Box: Work Order Number & Date
-    drawBox(margin + halfWidth + 10, currentY, halfWidth, 50);
-
+    // Right: Work Order Info
+    drawBox(margin + halfWidth + 15, currentY, halfWidth, 50, '#cbd5e1');
     if (bill.customerWONumber) {
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e');
-      doc.text('WORK ORDER NO: ', margin + halfWidth + 25, currentY + 12, { continued: true });
+      doc.font('Helvetica-Bold').fillColor('#334155');
+      doc.text('WORK ORDER NO:', margin + halfWidth + 25, currentY + 12);
       doc.font('Helvetica').fillColor('#000000');
-      doc.text(bill.customerWONumber);
+      doc.text(bill.customerWONumber, margin + halfWidth + 120, currentY + 12);
     }
-
     if (bill.customerWODate) {
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e');
-      doc.text('WO DATE: ', margin + halfWidth + 25, currentY + 28, { continued: true });
+      doc.font('Helvetica-Bold').fillColor('#334155');
+      doc.text('WO DATE:', margin + halfWidth + 25, currentY + 28);
       doc.font('Helvetica').fillColor('#000000');
-      doc.text(new Date(bill.customerWODate).toLocaleDateString('en-GB'));
+      doc.text(new Date(bill.customerWODate).toLocaleDateString('en-GB'), margin + halfWidth + 120, currentY + 28);
     }
 
-    // Row 2: Bill To (Left) & Project/Reference (Right)
-    currentY += 65;
+    // Bill To & Project Section
+    currentY += 60;
 
-    // Left Box: Bill To
-    drawBox(margin, currentY, halfWidth, 110);
-    doc.rect(margin, currentY, 5, 110).fillAndStroke('#0ea5e9', '#0ea5e9');
+    // Left: Bill To
+    drawBox(margin, currentY, halfWidth, 100, '#cbd5e1');
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
+       .text('BILL TO', margin + 10, currentY + 8);
 
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#0c4a6e')
-       .text('BILL TO', margin + 15, currentY + 8);
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000')
+       .text('VK Building Services Pvt Ltd', margin + 10, currentY + 24);
 
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000')
-       .text('VK Building Services Pvt Ltd', margin + 15, currentY + 25);
+    doc.fontSize(8).font('Helvetica').fillColor('#333333');
+    doc.text('1st Floor Krishe Sapphire, Sri Krishna Developers,', margin + 10, currentY + 40);
+    doc.text('Sy No 88 Opp Vishal Peripherals,', margin + 10, currentY + 52);
+    doc.text('Madhapur, Telangana, Hyderabad 500081', margin + 10, currentY + 64);
 
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
-    doc.text('1st Floor Krishe Sapphire,', margin + 15, currentY + 43);
-    doc.text('Sri Krishna Developers,', margin + 15, currentY + 55);
-    doc.text('Sy No 88 Opp Vishal Peripherals,', margin + 15, currentY + 67);
-    doc.text('Madhapur, Telangana,', margin + 15, currentY + 79);
-    doc.text('Hyderabad 500081', margin + 15, currentY + 91);
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155');
+    doc.text('GSTIN/PAN:', margin + 10, currentY + 80);
+    doc.font('Helvetica').fillColor('#000000');
+    doc.text('36AADCV1173D1ZL', margin + 60, currentY + 80);
 
-    // GSTIN in Bill To box
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e');
-    doc.text('GSTIN/PAN: ', margin + 15, currentY + 103, { continued: true });
-    doc.font('Helvetica').fillColor('#000000').text('36AADCV1173D1ZL');
+    // Right: Project & Reference
+    drawBox(margin + halfWidth + 15, currentY, halfWidth, 100, '#cbd5e1');
+    let rightY = currentY + 24;
 
-    // Right Box: Project & Reference
-    drawBox(margin + halfWidth + 10, currentY, halfWidth, 110);
-    doc.rect(margin + halfWidth + 10, currentY, 5, 110).fillAndStroke('#0ea5e9', '#0ea5e9');
-
-    let rightY = currentY + 25;
-
-    if (bill.projectName || bill.referenceNo) {
-      if (bill.projectName) {
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e');
-        doc.text('PROJECT: ', margin + halfWidth + 25, rightY, { continued: true });
-        doc.font('Helvetica').fillColor('#000000');
-        doc.text(bill.projectName, { width: halfWidth - 40 });
-        rightY += 30;
-      }
-
-      if (bill.referenceNo) {
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e');
-        doc.text('REFERENCE: ', margin + halfWidth + 25, rightY, { continued: true });
-        doc.font('Helvetica').fillColor('#000000');
-        doc.text(bill.referenceNo);
-      }
+    if (bill.projectName) {
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
+      doc.text('PROJECT:', margin + halfWidth + 25, rightY);
+      doc.font('Helvetica').fillColor('#000000');
+      doc.text(bill.projectName, margin + halfWidth + 25, rightY + 14, { width: halfWidth - 30 });
+      rightY += 40;
     }
 
-    currentY += 120;
+    if (bill.referenceNo) {
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
+      doc.text('REFERENCE:', margin + halfWidth + 25, rightY);
+      doc.font('Helvetica').fillColor('#000000');
+      doc.text(bill.referenceNo, margin + halfWidth + 80, rightY);
+    }
 
-    // Items Table - Modern Design
+    currentY += 110;
+
+    // Items Table - Clean Design
     const tableTop = currentY;
 
-    // Table header with gradient effect
-    doc.rect(margin, tableTop, contentWidth, 28).fillAndStroke('#0c4a6e', '#0c4a6e');
+    // Table header
+    doc.rect(margin, tableTop, contentWidth, 24).fillAndStroke('#3b82f6', '#3b82f6');
 
-    // Draw vertical lines for table header
-    doc.strokeColor('#FFFFFF').lineWidth(1);
-    doc.moveTo(margin + 35, tableTop).lineTo(margin + 35, tableTop + 28).stroke();
-    doc.moveTo(margin + 255, tableTop).lineTo(margin + 255, tableTop + 28).stroke();
-    doc.moveTo(margin + 330, tableTop).lineTo(margin + 330, tableTop + 28).stroke();
-    doc.moveTo(margin + 400, tableTop).lineTo(margin + 400, tableTop + 28).stroke();
-    doc.moveTo(margin + 450, tableTop).lineTo(margin + 450, tableTop + 28).stroke();
+    // Column positions
+    const col1 = margin + 5;
+    const col2 = margin + 35;
+    const col3 = margin + 280;
+    const col4 = margin + 340;
+    const col5 = margin + 400;
+    const col6 = margin + 460;
 
-    // Table Headers - White text on dark background
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#FFFFFF');
-    doc.text('No.', margin + 8, tableTop + 9, { width: 25, align: 'center' });
-    doc.text('Description', margin + 40, tableTop + 9, { width: 210 });
-    doc.text('SAC', margin + 260, tableTop + 9, { width: 65, align: 'center' });
-    doc.text('Qty', margin + 335, tableTop + 9, { width: 60, align: 'center' });
-    doc.text('Rate', margin + 405, tableTop + 9, { width: 40, align: 'right' });
-    doc.text('Amount', margin + 455, tableTop + 9, { width: 40, align: 'right' });
+    // Draw vertical lines for header
+    doc.strokeColor('#ffffff').lineWidth(0.5);
+    doc.moveTo(margin + 30, tableTop).lineTo(margin + 30, tableTop + 24).stroke();
+    doc.moveTo(col3 - 5, tableTop).lineTo(col3 - 5, tableTop + 24).stroke();
+    doc.moveTo(col4 - 5, tableTop).lineTo(col4 - 5, tableTop + 24).stroke();
+    doc.moveTo(col5 - 5, tableTop).lineTo(col5 - 5, tableTop + 24).stroke();
+    doc.moveTo(col6 - 5, tableTop).lineTo(col6 - 5, tableTop + 24).stroke();
+
+    // Table Headers
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
+    doc.text('No.', col1, tableTop + 7, { width: 20, align: 'center' });
+    doc.text('Description', col2, tableTop + 7, { width: 240 });
+    doc.text('SAC', col3, tableTop + 7, { width: 50, align: 'center' });
+    doc.text('Qty', col4, tableTop + 7, { width: 50, align: 'center' });
+    doc.text('Rate', col5, tableTop + 7, { width: 50, align: 'right' });
+    doc.text('Amount', col6, tableTop + 7, { width: 50, align: 'right' });
 
     // Table Items
-    let itemY = tableTop + 28;
-    doc.fontSize(9).font('Helvetica').strokeColor('#000000').lineWidth(0.5);
+    let itemY = tableTop + 24;
+    doc.fontSize(9).font('Helvetica').strokeColor('#cbd5e1').lineWidth(0.5);
 
     bill.items.forEach((item, index) => {
       if (itemY > 680) {
@@ -282,117 +276,120 @@ router.get('/:id/pdf', async (req, res) => {
         itemY = margin;
       }
 
-      const rowHeight = Math.max(28, doc.heightOfString(item.description, { width: 205 }) + 14);
+      const descHeight = doc.heightOfString(item.description, { width: 235 });
+      const rowHeight = Math.max(26, descHeight + 12);
 
-      // Alternating row colors for better readability
+      // Row background
       if (index % 2 === 0) {
-        doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#F9FAFB', '#E5E7EB');
+        doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#f8fafc', '#cbd5e1');
       } else {
-        doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#FFFFFF', '#E5E7EB');
+        doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#ffffff', '#cbd5e1');
       }
 
       // Draw vertical lines
-      doc.moveTo(margin + 35, itemY).lineTo(margin + 35, itemY + rowHeight).stroke();
-      doc.moveTo(margin + 255, itemY).lineTo(margin + 255, itemY + rowHeight).stroke();
-      doc.moveTo(margin + 330, itemY).lineTo(margin + 330, itemY + rowHeight).stroke();
-      doc.moveTo(margin + 400, itemY).lineTo(margin + 400, itemY + rowHeight).stroke();
-      doc.moveTo(margin + 450, itemY).lineTo(margin + 450, itemY + rowHeight).stroke();
+      doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + rowHeight).stroke();
+      doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + rowHeight).stroke();
+      doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + rowHeight).stroke();
+      doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + rowHeight).stroke();
+      doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + rowHeight).stroke();
 
       // Item data
       doc.fillColor('#000000');
-      doc.text((index + 1).toString(), margin + 8, itemY + 10, { width: 25, align: 'center' });
-      doc.text(item.description, margin + 40, itemY + 10, { width: 205 });
-      doc.text(item.sacCode || '-', margin + 260, itemY + 10, { width: 65, align: 'center' });
-      doc.text((item.quantity || 0).toFixed(2), margin + 335, itemY + 10, { width: 60, align: 'center' });
-      doc.text((item.rate || 0).toFixed(2), margin + 405, itemY + 10, { width: 40, align: 'right' });
-      doc.text((item.amount || 0).toFixed(2), margin + 455, itemY + 10, { width: 40, align: 'right' });
+      doc.text((index + 1).toString(), col1, itemY + 8, { width: 20, align: 'center' });
+      doc.text(item.description, col2, itemY + 8, { width: 235 });
+      doc.text(item.sacCode || '-', col3, itemY + 8, { width: 50, align: 'center' });
+      doc.text((item.quantity || 0).toFixed(2), col4, itemY + 8, { width: 50, align: 'center' });
+      doc.text((item.rate || 0).toFixed(2), col5, itemY + 8, { width: 50, align: 'right' });
+      doc.text((item.amount || 0).toFixed(2), col6, itemY + 8, { width: 50, align: 'right' });
 
       itemY += rowHeight;
     });
 
-    // Totals Section
+    // Add blank row for comments
+    const commentsRowHeight = 40;
+    doc.rect(margin, itemY, contentWidth, commentsRowHeight).fillAndStroke('#fffbeb', '#cbd5e1');
+
+    doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
+
+    doc.fontSize(9).font('Helvetica-Oblique').fillColor('#92400e');
+    doc.text('Comments / Notes:', col2, itemY + 15, { width: contentWidth - 70 });
+
+    itemY += commentsRowHeight;
+
+    // Totals Section - Simple & Clean
     const totalsY = itemY;
     const roundUp = bill.roundUp || 0;
     const hasRoundOff = roundUp !== 0;
 
+    // Grand Total Row
+    let grandTotalY = totalsY;
+
     if (hasRoundOff) {
       // Show Total Amount if there's round-off
-      drawBox(margin, totalsY, contentWidth, 25);
-      doc.moveTo(margin + 400, totalsY).lineTo(margin + 400, totalsY + 25).stroke();
-      doc.moveTo(margin + 450, totalsY).lineTo(margin + 450, totalsY + 25).stroke();
-
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
-      doc.text('Total Amount:', margin + 260, totalsY + 7, { width: 135, align: 'right' });
-      doc.text('Rs. ' + bill.totalAmount.toFixed(2), margin + 455, totalsY + 7, { width: 40, align: 'right' });
+      doc.rect(margin, totalsY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
+      doc.text('Total Amount:', margin + 320, totalsY + 7);
+      doc.text('Rs. ' + bill.totalAmount.toFixed(2), margin + 420, totalsY + 7, { width: 95, align: 'right' });
 
       // Show Round Off
-      const roundOffY = totalsY + 25;
-      drawBox(margin, roundOffY, contentWidth, 25);
-      doc.moveTo(margin + 400, roundOffY).lineTo(margin + 400, roundOffY + 25).stroke();
-      doc.moveTo(margin + 450, roundOffY).lineTo(margin + 450, roundOffY + 25).stroke();
+      const roundOffY = totalsY + 24;
+      doc.rect(margin, roundOffY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
+      doc.text('Round Off:', margin + 320, roundOffY + 7);
+      doc.text('Rs. ' + roundUp.toFixed(2), margin + 420, roundOffY + 7, { width: 95, align: 'right' });
 
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
-      doc.text('Round Off:', margin + 260, roundOffY + 7, { width: 135, align: 'right' });
-      doc.text('Rs. ' + roundUp.toFixed(2), margin + 455, roundOffY + 7, { width: 40, align: 'right' });
-
-      var grandTotalY = roundOffY + 25;
-    } else {
-      var grandTotalY = totalsY;
+      grandTotalY = roundOffY + 24;
     }
 
     // Grand Total - Highlighted
-    doc.rect(margin, grandTotalY, contentWidth, 32).fillAndStroke('#0c4a6e', '#0c4a6e');
-    doc.strokeColor('#FFFFFF');
-    doc.moveTo(margin + 400, grandTotalY).lineTo(margin + 400, grandTotalY + 32).stroke();
-    doc.moveTo(margin + 450, grandTotalY).lineTo(margin + 450, grandTotalY + 32).stroke();
+    doc.rect(margin, grandTotalY, contentWidth, 30).fillAndStroke('#1e40af', '#1e40af');
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
+    doc.text('GRAND TOTAL:', margin + 320, grandTotalY + 9);
+    doc.fontSize(12).font('Helvetica-Bold');
+    doc.text('Rs. ' + bill.grandTotal.toFixed(2), margin + 420, grandTotalY + 9, { width: 95, align: 'right' });
 
-    doc.fillColor('#FFFFFF').fontSize(13).font('Helvetica-Bold');
-    doc.text('GRAND TOTAL:', margin + 260, grandTotalY + 10, { width: 135, align: 'right' });
-    doc.text('Rs. ' + bill.grandTotal.toFixed(2), margin + 455, grandTotalY + 10, { width: 40, align: 'right' });
-
-    // Amount in Words - Modern Card
-    currentY = grandTotalY + 45;
-    doc.rect(margin, currentY, contentWidth, 35).fillAndStroke('#F9FAFB', '#E5E7EB');
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#0c4a6e')
+    // Amount in Words
+    currentY = grandTotalY + 40;
+    doc.rect(margin, currentY, contentWidth, 32).fillAndStroke('#f8fafc', '#cbd5e1');
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155')
        .text('Amount in Words:', margin + 10, currentY + 8);
-    doc.fontSize(10).font('Helvetica').fillColor('#000000')
-       .text(bill.amountInWords || 'Amount not specified', margin + 10, currentY + 21, { width: contentWidth - 20 });
+    doc.fontSize(9).font('Helvetica').fillColor('#000000')
+       .text(bill.amountInWords || 'Amount not specified', margin + 10, currentY + 19, { width: contentWidth - 20 });
 
-    // Payment Terms and Bank Details - Side by Side Modern Cards
-    currentY += 48;
-    const boxHeight = 85;
+    // Payment Terms and Bank Details
+    currentY += 42;
+    const boxHeight = 70;
 
-    // Payment Terms Box with colored top
-    doc.rect(margin, currentY, halfWidth, 5).fillAndStroke('#0ea5e9', '#0ea5e9');
-    drawBox(margin, currentY, halfWidth, boxHeight);
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#0c4a6e')
-       .text('Payment Terms', margin + 10, currentY + 15);
+    // Payment Terms
+    drawBox(margin, currentY, halfWidth, boxHeight, '#cbd5e1');
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
+       .text('Payment Terms', margin + 10, currentY + 8);
     doc.fontSize(9).font('Helvetica').fillColor('#333333')
-       .text(bill.paymentTerms || '30 Days credit', margin + 10, currentY + 35);
+       .text(bill.paymentTerms || '30 Days credit', margin + 10, currentY + 26);
 
-    // Bank Details Box with colored top
-    doc.rect(margin + halfWidth + 10, currentY, halfWidth, 5).fillAndStroke('#0ea5e9', '#0ea5e9');
-    drawBox(margin + halfWidth + 10, currentY, halfWidth, boxHeight);
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#0c4a6e')
-       .text('Bank Details', margin + halfWidth + 20, currentY + 15);
-    doc.fontSize(9).font('Helvetica').fillColor('#333333');
+    // Bank Details
+    drawBox(margin + halfWidth + 15, currentY, halfWidth, boxHeight, '#cbd5e1');
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
+       .text('Bank Details', margin + halfWidth + 25, currentY + 8);
+    doc.fontSize(8).font('Helvetica').fillColor('#333333');
     doc.text(`Account Name: ${process.env.BANK_ACCOUNT_NAME || 'M Picheswara Rao'}`,
-             margin + halfWidth + 20, currentY + 35);
+             margin + halfWidth + 25, currentY + 26);
     doc.text(`Account No: ${process.env.BANK_ACCOUNT_NO || '782701505244'}`,
-             margin + halfWidth + 20, currentY + 48);
+             margin + halfWidth + 25, currentY + 38);
     doc.text(`IFSC Code: ${process.env.BANK_IFSC || 'ICIC0007827'}`,
-             margin + halfWidth + 20, currentY + 61);
+             margin + halfWidth + 25, currentY + 50);
 
-    // Signature Section - Modern
-    currentY += boxHeight + 25;
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#0c4a6e')
+    // Signature Section
+    currentY += boxHeight + 20;
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155')
        .text('For ' + (process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO'),
-             margin + contentWidth - 180, currentY, { width: 180, align: 'right' });
+             margin + contentWidth - 160, currentY, { width: 160, align: 'right' });
 
-    currentY += 30;
-    doc.moveTo(margin + contentWidth - 150, currentY).lineTo(margin + contentWidth, currentY).strokeColor('#0ea5e9').lineWidth(2).stroke();
-    doc.fontSize(9).font('Helvetica').fillColor('#666666')
-       .text('Authorized Signatory', margin + contentWidth - 150, currentY + 5, { width: 150, align: 'right' });
+    currentY += 25;
+    doc.moveTo(margin + contentWidth - 140, currentY).lineTo(margin + contentWidth, currentY)
+       .strokeColor('#2563eb').lineWidth(1.5).stroke();
+    doc.fontSize(8).font('Helvetica').fillColor('#666666')
+       .text('Authorized Signatory', margin + contentWidth - 140, currentY + 3, { width: 140, align: 'right' });
 
     doc.end();
   } catch (error) {
