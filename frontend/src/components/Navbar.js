@@ -57,14 +57,6 @@ const Navbar = () => {
                 }}>
                   Tanish Ram & Tejas Laxman
                 </span>
-                <span style={{
-                  fontSize: '10px',
-                  opacity: 0.8,
-                  fontWeight: 'normal',
-                  marginTop: '1px'
-                }}>
-                  Cooling You Can Trust
-                </span>
               </div>
             </div>
           </Link>
@@ -73,22 +65,8 @@ const Navbar = () => {
           <ul className="navbar-nav">
             <li><Link to="/" className={location.pathname === '/' ? 'active' : ''}>Home</Link></li>
             <li><Link to="/services" className={location.pathname === '/services' ? 'active' : ''}>Services</Link></li>
-            <li><a href="#locations">Locations</a></li>
-            <li><a href="#contact">Contact Us</a></li>
-            <li>
-              <a
-                href="tel:+918179697191"
-                style={{
-                  background: '#4CAF50',
-                  padding: '8px 20px',
-                  borderRadius: '4px',
-                  color: 'white',
-                  fontWeight: 'bold'
-                }}
-              >
-                Book Now
-              </a>
-            </li>
+            <li><Link to="/locations" className={location.pathname === '/locations' ? 'active' : ''}>Locations</Link></li>
+            <li><Link to="/contact" className={location.pathname === '/contact' ? 'active' : ''}>Contact Us</Link></li>
           </ul>
         </div>
       </nav>

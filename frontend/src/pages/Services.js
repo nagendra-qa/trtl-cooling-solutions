@@ -67,7 +67,7 @@ const Services = () => {
     {
       id: 4,
       name: 'VRF AC',
-      image: '/Images/VRF_AC.jpg',
+      image: '/Images/VRF_AC.jpeg',
       description: 'Variable Refrigerant Flow systems are advanced HVAC solutions for large commercial buildings, offering individual zone control and exceptional energy efficiency.',
       features: [
         'Individual zone temperature control',
@@ -103,17 +103,50 @@ const Services = () => {
         'Refrigerant': 'Chilled Water/DX'
       },
       services: ['Installation', 'Maintenance', 'Filter Replacement', 'Cleaning', 'Repair']
+    },
+    {
+      id: 6,
+      name: 'Ductable AC',
+      image: '/Images/Ductable_AC.jpeg',
+      description: 'Ductable or Ducted AC systems provide concealed air conditioning through ducts, perfect for large spaces requiring uniform cooling without visible indoor units.',
+      features: [
+        'Concealed indoor unit',
+        'Multiple rooms cooling from single unit',
+        'Aesthetic appeal - no visible units',
+        'Uniform temperature distribution',
+        'Ideal for large homes and offices'
+      ],
+      specifications: {
+        'Cooling Capacity': '3 Ton - 10 Ton',
+        'Power Consumption': '3000W - 10000W',
+        'Coverage Area': '500-2000 sq ft',
+        'Refrigerant': 'R410A/R32'
+      },
+      services: ['Installation', 'Duct Cleaning', 'Maintenance', 'Repair', 'Gas Charging']
+    },
+    {
+      id: 7,
+      name: 'Central AC',
+      image: '/Images/Central_AC.jpeg',
+      description: 'Central air conditioning systems provide whole-building climate control, ideal for large residences, villas, and commercial establishments.',
+      features: [
+        'Whole building climate control',
+        'Energy efficient for large spaces',
+        'Centralized temperature management',
+        'Advanced filtration systems',
+        'Quiet operation throughout building'
+      ],
+      specifications: {
+        'Cooling Capacity': '10 Ton - 50 Ton',
+        'Power Consumption': '12000W - 60000W',
+        'Coverage Area': '3000+ sq ft',
+        'Refrigerant': 'R410A'
+      },
+      services: ['Installation', 'System Design', 'Maintenance', 'Repair', 'Ductwork Service']
     }
   ];
 
   const maintenanceServices = [
-    {
-      id: 6,
-      name: 'AC Installation',
-      image: 'https://images.unsplash.com/photo-1631545806609-c2f4833a0b41?w=400&h=250&fit=crop&auto=format&q=70',
-      description: 'Professional AC installation services for all types of air conditioning systems with proper sizing and positioning.',
-      services: ['Site survey', 'AC sizing calculation', 'Professional installation', 'Testing & commissioning', 'Warranty registration']
-    },
     {
       id: 7,
       name: 'AC Repair & Maintenance',
@@ -370,11 +403,19 @@ const Services = () => {
                 padding: '12px 30px',
                 fontSize: '16px',
                 textDecoration: 'none',
-                background: 'white',
-                color: 'var(--dark-blue)'
+                background: '#0ea5e9',
+                color: 'white',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              📞 Call Now
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/724/724664.png"
+                alt="Phone"
+                style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }}
+              />
+              Call Now
             </a>
             <a
               href="https://wa.me/918179697191"
@@ -385,11 +426,19 @@ const Services = () => {
                 padding: '12px 30px',
                 fontSize: '16px',
                 textDecoration: 'none',
-                background: '#25D366',
-                color: 'white'
+                background: '#0ea5e9',
+                color: 'white',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              💬 WhatsApp
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/733/733585.png"
+                alt="WhatsApp"
+                style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }}
+              />
+              WhatsApp
             </a>
           </div>
         </div>

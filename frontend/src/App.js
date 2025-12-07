@@ -6,6 +6,8 @@ import Footer from './components/Footer';
 // Lazy load pages for better initial load performance
 const Home = lazy(() => import('./pages/Home'));
 const Services = lazy(() => import('./pages/Services'));
+const Locations = lazy(() => import('./pages/Locations'));
+const Contact = lazy(() => import('./pages/Contact'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
@@ -39,6 +41,8 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/services" element={<Services />} />
+                  <Route path="/locations" element={<Locations />} />
+                  <Route path="/contact" element={<Contact />} />
                 </Routes>
               </Suspense>
               <Footer />

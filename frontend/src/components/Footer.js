@@ -67,7 +67,7 @@ const Footer = () => {
             <div style={{ fontSize: '14px', lineHeight: '1.8', opacity: 0.9 }}>
               <p style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <img
-                  src="https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2_hdpi.png"
+                  src="/Images/GoogleMap_Symbol.jpeg"
                   alt="Location"
                   style={{ width: '20px', height: '20px', marginTop: '2px', flexShrink: 0 }}
                 />
@@ -96,17 +96,6 @@ const Footer = () => {
               <p style={{ marginBottom: '15px' }}>9:00 AM - 8:00 PM</p>
               <p style={{ marginBottom: '8px', fontWeight: '600' }}>Sunday:</p>
               <p style={{ marginBottom: '15px' }}>10:00 AM - 6:00 PM</p>
-              <p style={{
-                background: 'rgba(120, 171, 66, 0.2)',
-                padding: '10px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: '#78ab42',
-                border: '1px solid rgba(120, 171, 66, 0.3)'
-              }}>
-                Available for emergency services 24/7
-              </p>
             </div>
           </div>
         </div>
