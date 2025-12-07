@@ -31,7 +31,6 @@ const Home = () => {
         'AC Repair & Maintenance': 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400&h=250&fit=crop&auto=format&q=70',
         'Preventive Maintenance (PPM)': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=250&fit=crop&auto=format&q=70',
         'Gas Charging': '/Images/AC_GasFilling.jpeg',
-        'Filter Cleaning & Replacement': 'https://images.unsplash.com/photo-1581578949510-fa7315c4c350?w=400&h=250&fit=crop&auto=format&q=70',
         'Strainer Cleaning': '/Images/Strainer_Cleaning.jpeg',
         'Chemical Cleaning': '/Images/Chemical_Cleaning.jpeg',
         'Compressor Repair': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=250&fit=crop&auto=format&q=70',
