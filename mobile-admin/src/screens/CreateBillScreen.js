@@ -32,6 +32,7 @@ export default function CreateBillScreen({ navigation }) {
     referenceNo: '',
     items: [{ description: '', sacCode: '', unit: 'EA', quantity: 1, rate: 0, amount: 0 }],
     paymentTerms: '30 Days credit',
+    notes: '',
   });
 
   useEffect(() => {
@@ -267,6 +268,29 @@ export default function CreateBillScreen({ navigation }) {
             <Text style={styles.grandTotalLabel}>Grand Total:</Text>
             <Text style={styles.grandTotalValue}>₹{grandTotal.toFixed(2)}</Text>
           </View>
+        </View>
+
+        {/* Payment Terms and Notes */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Payment Terms & Notes</Text>
+
+          <Text style={styles.label}>Payment Terms</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.paymentTerms}
+            onChangeText={(value) => setFormData({ ...formData, paymentTerms: value })}
+            placeholder="30 Days credit"
+          />
+
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={formData.notes}
+            onChangeText={(value) => setFormData({ ...formData, notes: value })}
+            placeholder="Add any additional notes (optional)"
+            multiline
+            numberOfLines={3}
+          />
         </View>
 
         {/* Submit Button */}

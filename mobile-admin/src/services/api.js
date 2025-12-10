@@ -37,6 +37,7 @@ export const billsAPI = {
   update: (id, data) => api.put(`/bills/${id}`, data),
   delete: (id) => api.delete(`/bills/${id}`),
   getNextInvoiceNumber: () => api.get('/bills/next-invoice-number'),
+  downloadPDF: (id) => api.get(`/bills/${id}/pdf`, { responseType: 'blob' }),
 };
 
 export const customersAPI = {

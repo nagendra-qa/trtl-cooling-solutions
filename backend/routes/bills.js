@@ -4,426 +4,506 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const Bill = require('../models/Bill');
-const { numberToWords } = require('../utils/helpers');
-const { generateInvoiceNumber } = require('../utils/invoiceNumber');
+const {numberToWords} = require('../utils/helpers');
+const {generateInvoiceNumber} = require('../utils/invoiceNumber');
 
 // Get all bills
 router.get('/', async (req, res) => {
-  try {
-    const { customerId, status } = req.query;
-    const query = {};
-    if (customerId) query.customer = customerId;
-    if (status) query.status = status;
+    try {
+        const {customerId, status} = req.query;
+        const query = {};
+        if (customerId) query.customer = customerId;
+        if (status) query.status = status;
 
-    const bills = await Bill.find(query)
-      .populate('customer')
-      .populate('camp')
-      .populate('workOrder')
-      .sort({ createdAt: -1 });
-    res.json(bills);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+        const bills = await Bill.find(query)
+            .populate('customer')
+            .populate('camp')
+            .populate('workOrder')
+            .sort({createdAt: -1});
+        res.json(bills);
+    } catch (error) {
+        res.status(500).json({message: error.message});
+    }
 });
 
 // Get next invoice number
 router.get('/next-invoice-number', async (req, res) => {
-  try {
-    const nextInvoiceNumber = await generateInvoiceNumber();
-    res.json({ invoiceNumber: nextInvoiceNumber });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    try {
+        const nextInvoiceNumber = await generateInvoiceNumber();
+        res.json({invoiceNumber: nextInvoiceNumber});
+    } catch (error) {
+        res.status(500).json({message: error.message});
+    }
 });
 
 // Get single bill
 router.get('/:id', async (req, res) => {
-  try {
-    const bill = await Bill.findById(req.params.id)
-      .populate('customer')
-      .populate('camp')
-      .populate('workOrder');
-    if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
+    try {
+        const bill = await Bill.findById(req.params.id)
+            .populate('customer')
+            .populate('camp')
+            .populate('workOrder');
+        if (!bill) {
+            return res.status(404).json({message: 'Bill not found'});
+        }
+        res.json(bill);
+    } catch (error) {
+        res.status(500).json({message: error.message});
     }
-    res.json(bill);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
 });
 
 // Create bill
 router.post('/', async (req, res) => {
-  try {
-    const billData = req.body;
+    try {
+        const billData = req.body;
 
-    // Auto-calculate round-off and grand total
-    if (billData.totalAmount) {
-      const roundedGrandTotal = Math.round(billData.totalAmount);
-      billData.roundUp = roundedGrandTotal - billData.totalAmount;
-      billData.grandTotal = roundedGrandTotal;
+        // Auto-calculate amount in words if not provided
+        if (!billData.amountInWords && billData.grandTotal) {
+            billData.amountInWords = numberToWords(billData.grandTotal);
+        }
+
+        const bill = new Bill(billData);
+        const newBill = await bill.save();
+        const populatedBill = await Bill.findById(newBill._id)
+            .populate('customer')
+            .populate('camp')
+            .populate('workOrder');
+        res.status(201).json(populatedBill);
+    } catch (error) {
+        res.status(400).json({message: error.message});
     }
-
-    // Auto-calculate amount in words if not provided
-    if (!billData.amountInWords && billData.grandTotal) {
-      billData.amountInWords = numberToWords(billData.grandTotal);
-    }
-
-    const bill = new Bill(billData);
-    const newBill = await bill.save();
-    const populatedBill = await Bill.findById(newBill._id)
-      .populate('customer')
-      .populate('camp')
-      .populate('workOrder');
-    res.status(201).json(populatedBill);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
 });
 
 // Update bill
 router.put('/:id', async (req, res) => {
-  try {
-    const billData = req.body;
+    try {
+        const billData = req.body;
 
-    // Auto-calculate round-off and grand total
-    if (billData.totalAmount) {
-      const roundedGrandTotal = Math.round(billData.totalAmount);
-      billData.roundUp = roundedGrandTotal - billData.totalAmount;
-      billData.grandTotal = roundedGrandTotal;
+        // Auto-calculate amount in words if not provided
+        if (!billData.amountInWords && billData.grandTotal) {
+            billData.amountInWords = numberToWords(billData.grandTotal);
+        }
+
+        const bill = await Bill.findByIdAndUpdate(
+            req.params.id,
+            billData,
+            {new: true, runValidators: true}
+        ).populate('customer').populate('camp').populate('workOrder');
+
+        if (!bill) {
+            return res.status(404).json({message: 'Bill not found'});
+        }
+        res.json(bill);
+    } catch (error) {
+        res.status(400).json({message: error.message});
     }
-
-    // Auto-calculate amount in words if not provided
-    if (!billData.amountInWords && billData.grandTotal) {
-      billData.amountInWords = numberToWords(billData.grandTotal);
-    }
-
-    const bill = await Bill.findByIdAndUpdate(
-      req.params.id,
-      billData,
-      { new: true, runValidators: true }
-    ).populate('customer').populate('camp').populate('workOrder');
-
-    if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
-    }
-    res.json(bill);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
 });
 
 // Delete bill
 router.delete('/:id', async (req, res) => {
-  try {
-    const bill = await Bill.findByIdAndDelete(req.params.id);
-    if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
+    try {
+        const bill = await Bill.findByIdAndDelete(req.params.id);
+        if (!bill) {
+            return res.status(404).json({message: 'Bill not found'});
+        }
+        res.json({message: 'Bill deleted successfully'});
+    } catch (error) {
+        res.status(500).json({message: error.message});
     }
-    res.json({ message: 'Bill deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
 });
 
 // Generate PDF bill
 router.get('/:id/pdf', async (req, res) => {
-  try {
-    const bill = await Bill.findById(req.params.id)
-      .populate('customer')
-      .populate('camp')
-      .populate('workOrder');
+    try {
+        const bill = await Bill.findById(req.params.id)
+            .populate('customer')
+            .populate('camp')
+            .populate('workOrder');
 
-    if (!bill) {
-      return res.status(404).json({ message: 'Bill not found' });
+        if (!bill) {
+            return res.status(404).json({message: 'Bill not found'});
+        }
+
+        // Create PDF with clean professional design
+        const doc = new PDFDocument({margin: 40, size: 'A4'});
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Invoice-${bill.billNumber}.pdf`);
+
+        doc.pipe(res);
+
+        const pageWidth = 595.28;
+        const margin = 40;
+        const contentWidth = pageWidth - (margin * 2);
+
+        // Helper function to draw box
+        const drawBox = (x, y, width, height, color = '#000000') => {
+            doc.strokeColor(color).lineWidth(1).rect(x, y, width, height).stroke();
+        };
+
+        // Company Header - Simple & Clean
+        doc.fontSize(22).font('Helvetica-Bold').fillColor('#2563eb')
+            .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin, margin);
+
+        doc.fontSize(9).font('Helvetica').fillColor('#666666');
+        let headerY = margin + 28;
+        doc.text(`PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`, margin, headerY);
+        doc.text(`Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin + 180, headerY);
+        doc.text(process.env.COMPANY_BILL_ADDRESS || 'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',
+            margin, headerY + 14, {width: contentWidth});
+
+        // Horizontal line separator
+        doc.strokeColor('#2563eb').lineWidth(2)
+            .moveTo(margin, headerY + 35).lineTo(margin + contentWidth, headerY + 35).stroke();
+
+        // INVOICE Title
+        let currentY = headerY + 50;
+        doc.fontSize(20).font('Helvetica-Bold').fillColor('#1e40af')
+            .text('INVOICE', margin, currentY);
+
+        currentY += 35;
+        const halfWidth = (contentWidth - 15) / 2;
+
+        // Invoice Details Section - Simple Boxes
+        // Left: Invoice Info
+        drawBox(margin, currentY, halfWidth, 50, '#cbd5e1');
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
+        doc.text('INVOICE NUMBER:', margin + 10, currentY + 12);
+        doc.font('Helvetica').fillColor('#000000');
+        doc.text(bill.billNumber, margin + 100, currentY + 12);
+
+        doc.font('Helvetica-Bold').fillColor('#334155');
+        doc.text('INVOICE DATE:', margin + 10, currentY + 28);
+        doc.font('Helvetica').fillColor('#000000');
+        doc.text(new Date(bill.billDate).toLocaleDateString('en-GB'), margin + 100, currentY + 28);
+
+        // Right: Work Order Info
+        drawBox(margin + halfWidth + 15, currentY, halfWidth, 50, '#cbd5e1');
+        if (bill.customerWONumber) {
+            doc.font('Helvetica-Bold').fillColor('#334155');
+            doc.text('WORK ORDER NO:', margin + halfWidth + 25, currentY + 12);
+            doc.font('Helvetica').fillColor('#000000');
+            doc.text(bill.customerWONumber, margin + halfWidth + 120, currentY + 12);
+        }
+        if (bill.customerWODate) {
+            doc.font('Helvetica-Bold').fillColor('#334155');
+            doc.text('WO DATE:', margin + halfWidth + 25, currentY + 28);
+            doc.font('Helvetica').fillColor('#000000');
+            doc.text(new Date(bill.customerWODate).toLocaleDateString('en-GB'), margin + halfWidth + 120, currentY + 28);
+        }
+
+        // Bill To & Project Section
+        currentY += 60;
+
+        // Left: Bill To
+        drawBox(margin, currentY, halfWidth, 100, '#cbd5e1');
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
+            .text('BILL TO', margin + 10, currentY + 8);
+
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000')
+            .text('VK Building Services Pvt Ltd', margin + 10, currentY + 24);
+
+        doc.fontSize(8).font('Helvetica').fillColor('#333333');
+        doc.text('1st Floor Krishe Sapphire, Sri Krishna Developers,', margin + 10, currentY + 40);
+        doc.text('Sy No 88 Opp Vishal Peripherals,', margin + 10, currentY + 52);
+        doc.text('Madhapur, Telangana, Hyderabad 500081', margin + 10, currentY + 64);
+
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155');
+        doc.text('GSTIN/PAN:', margin + 10, currentY + 80);
+        doc.font('Helvetica').fillColor('#000000');
+        doc.text('36AADCV1173D1ZL', margin + 60, currentY + 80);
+
+        // Right: Project & Reference
+        drawBox(margin + halfWidth + 15, currentY, halfWidth, 100, '#cbd5e1');
+        let rightY = currentY + 24;
+
+        if (bill.projectName) {
+            doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
+            doc.text('PROJECT:', margin + halfWidth + 25, rightY);
+            doc.font('Helvetica').fillColor('#000000');
+            doc.text(bill.projectName, margin + halfWidth + 75, rightY, {width: halfWidth - 80});
+            rightY += 12;
+        }
+
+        if (bill.referenceNo) {
+            doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
+            doc.text('REFERENCE:', margin + halfWidth + 25, rightY);
+            doc.font('Helvetica').fillColor('#000000');
+            doc.text(bill.referenceNo, margin + halfWidth + 75, rightY);
+        }
+
+        currentY += 110;
+
+        // Items Table - Clean Design
+        const tableTop = currentY;
+
+        // Table header
+        doc.rect(margin, tableTop, contentWidth, 24).fillAndStroke('#3b82f6', '#3b82f6');
+
+        // Column positions
+        const col1 = margin + 5;
+        const col2 = margin + 35;
+        const col3 = margin + 280;
+        const col4 = margin + 340;
+        const col5 = margin + 400;
+        const col6 = margin + 460;
+
+        // Draw vertical lines for header
+        doc.strokeColor('#ffffff').lineWidth(0.5);
+        doc.moveTo(margin + 30, tableTop).lineTo(margin + 30, tableTop + 24).stroke();
+        doc.moveTo(col3 - 5, tableTop).lineTo(col3 - 5, tableTop + 24).stroke();
+        doc.moveTo(col4 - 5, tableTop).lineTo(col4 - 5, tableTop + 24).stroke();
+        doc.moveTo(col5 - 5, tableTop).lineTo(col5 - 5, tableTop + 24).stroke();
+        doc.moveTo(col6 - 5, tableTop).lineTo(col6 - 5, tableTop + 24).stroke();
+
+        // Table Headers
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
+        doc.text('No.', col1, tableTop + 7, {width: 20, align: 'center'});
+        doc.text('Description', col2, tableTop + 7, {width: 240});
+        doc.text('SAC', col3, tableTop + 7, {width: 50, align: 'center'});
+        doc.text('Qty', col4, tableTop + 7, {width: 50, align: 'center'});
+        doc.text('Rate', col5, tableTop + 7, {width: 50, align: 'right'});
+        doc.text('Amount', col6, tableTop + 7, {width: 50, align: 'right'});
+
+        // Table Items
+        let itemY = tableTop + 24;
+        doc.fontSize(9).font('Helvetica').strokeColor('#cbd5e1').lineWidth(0.5);
+
+        bill.items.forEach((item, index) => {
+            if (itemY > 680) {
+                doc.addPage();
+                itemY = margin;
+            }
+
+            const descHeight = doc.heightOfString(item.description, {width: 235});
+            const rowHeight = Math.max(26, descHeight + 12);
+
+            // Row background
+            if (index % 2 === 0) {
+                doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#f8fafc', '#cbd5e1');
+            } else {
+                doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#ffffff', '#cbd5e1');
+            }
+
+            // Draw vertical lines
+            doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + rowHeight).stroke();
+            doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + rowHeight).stroke();
+            doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + rowHeight).stroke();
+            doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + rowHeight).stroke();
+            doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + rowHeight).stroke();
+
+            // Item data
+            doc.fillColor('#000000');
+            doc.text((index + 1).toString(), col1, itemY + 8, {width: 20, align: 'center'});
+            doc.text(item.description, col2, itemY + 8, {width: 235});
+            doc.text(item.sacCode || '-', col3, itemY + 8, {width: 50, align: 'center'});
+            doc.text((item.quantity || 0).toFixed(2), col4, itemY + 8, {width: 50, align: 'center'});
+            doc.text((item.rate || 0).toFixed(2), col5, itemY + 8, {width: 50, align: 'right'});
+            doc.text((item.amount || 0).toFixed(2), col6, itemY + 8, {width: 50, align: 'right'});
+
+            itemY += rowHeight;
+        });
+
+        // Add blank row for comments - More prominent
+        const commentsRowHeight = 50;
+        doc.rect(margin, itemY, contentWidth, commentsRowHeight).fillAndStroke('#fef3c7', '#cbd5e1');
+
+        // Draw vertical line after No. column
+        doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
+
+        // Draw all column lines for comments row
+        doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + commentsRowHeight).stroke();
+        doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + commentsRowHeight).stroke();
+        doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + commentsRowHeight).stroke();
+        doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + commentsRowHeight).stroke();
+
+        // Display the notes/comments if provided
+        if (bill.notes && bill.notes.trim() !== '') {
+            doc.fontSize(9).font('Helvetica-Bold').fillColor('#92400e');
+            doc.text('Comments / Notes:', col2, itemY + 8, {width: 240});
+            doc.fontSize(9).font('Helvetica').fillColor('#000000');
+            doc.text(bill.notes, col2, itemY + 22, {width: contentWidth - 75});
+        } else {
+            // Show placeholder if no notes
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#92400e');
+            doc.text('Comments / Notes:', col2, itemY + 10, {width: 240});
+            doc.fontSize(8).font('Helvetica-Oblique').fillColor('#78716c');
+            doc.text('(Space for additional remarks or instructions)', col2, itemY + 26, {width: 240});
+        }
+
+        itemY += commentsRowHeight;
+
+        // ------------------------------------------------------------
+//  CALCULATE TOTALS WITH CUSTOM ROUNDING RULE
+// ------------------------------------------------------------
+
+// Total of all amounts
+        const totalAmount = bill.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+// Extract fractional part
+        const fraction = totalAmount - Math.floor(totalAmount);
+
+// Apply your rule
+        let autoRoundedTotal;
+
+        if (fraction > 0.50) {
+            autoRoundedTotal = Math.ceil(totalAmount);     // round UP
+        } else if (fraction <= 0.50) {
+            autoRoundedTotal = Math.floor(totalAmount);    // round DOWN
+        } else {
+            autoRoundedTotal = totalAmount;                // exactly .50 → no change
+        }
+
+// Auto-calculated round off difference
+        let calculatedRoundOff = autoRoundedTotal - totalAmount;
+
+// Use DB roundUp if provided, else auto-calculated
+        let roundUp = (bill.roundUp !== undefined && bill.roundUp !== null)
+            ? Number(bill.roundUp)
+            : calculatedRoundOff;
+
+// Prevent NaN
+        if (isNaN(roundUp)) roundUp = 0;
+
+// Final grand total
+        const grandTotal = totalAmount + roundUp;
+
+// Should we show round-off row?
+        const hasRoundOff = Math.abs(roundUp) >= 0.01;
+
+// ------------------------------------------------------------
+//  DISPLAY TOTALS SECTION
+// ------------------------------------------------------------
+        const totalsY = itemY;
+        let grandTotalY = totalsY;
+
+        if (hasRoundOff) {
+            // TOTAL AMOUNT ROW
+            doc.rect(margin, totalsY, contentWidth, 24)
+                .fillAndStroke('#f1f5f9', '#cbd5e1');
+
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
+            doc.text('Total Amount:', margin + 320, totalsY + 7);
+            doc.text('Rs. ' + totalAmount.toFixed(2),
+                margin + 420, totalsY + 7,
+                {width: 95, align: 'right'});
+
+            // ROUND-OFF ROW
+            const roundOffY = totalsY + 24;
+
+            doc.rect(margin, roundOffY, contentWidth, 24)
+                .fillAndStroke('#f1f5f9', '#cbd5e1');
+
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
+            doc.text('Round Off:', margin + 320, roundOffY + 7);
+
+            const sign = roundUp >= 0 ? '+' : '';
+            doc.text(
+                'Rs. ' + sign + roundUp.toFixed(2),
+                margin + 420, roundOffY + 7,
+                {width: 95, align: 'right'}
+            );
+
+            grandTotalY = roundOffY + 24;
+        }
+
+// GRAND TOTAL (highlighted)
+        doc.rect(margin, grandTotalY, contentWidth, 30)
+            .fillAndStroke('#1e40af', '#1e40af');
+
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
+        doc.text('GRAND TOTAL:', margin + 320, grandTotalY + 9);
+        doc.text(
+            'Rs. ' + grandTotal.toFixed(2),
+            margin + 420, grandTotalY + 9,
+            {width: 95, align: 'right'}
+        );
+
+// ------------------------------------------------------------
+//  AMOUNT IN WORDS — based on rounded grand total
+// ------------------------------------------------------------
+        currentY = grandTotalY + 40;
+
+        doc.rect(margin, currentY, contentWidth, 32)
+            .fillAndStroke('#f8fafc', '#cbd5e1');
+
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155')
+            .text('Amount in Words:', margin + 10, currentY + 8);
+
+        const amountInWords = numberToWords(Math.round(grandTotal));
+        doc.fontSize(9).font('Helvetica').fillColor('#000000')
+            .text(amountInWords, margin + 10, currentY + 19,
+                {width: contentWidth - 20});
+
+
+        // Payment Terms and Bank Details
+        currentY += 42;
+        const boxHeight = 70;
+
+        // Payment Terms
+        drawBox(margin, currentY, halfWidth, boxHeight, '#cbd5e1');
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
+            .text('Payment Terms', margin + 10, currentY + 8);
+        doc.fontSize(9).font('Helvetica').fillColor('#333333')
+            .text(bill.paymentTerms || '30 Days credit', margin + 10, currentY + 26);
+
+        // Bank Details
+        drawBox(margin + halfWidth + 15, currentY, halfWidth, boxHeight, '#cbd5e1');
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
+            .text('Bank Details', margin + halfWidth + 25, currentY + 8);
+        doc.fontSize(8).font('Helvetica').fillColor('#333333');
+        doc.text(`Account Name: ${process.env.BANK_ACCOUNT_NAME || 'M Picheswara Rao'}`,
+            margin + halfWidth + 25, currentY + 26);
+        doc.text(`Account No: ${process.env.BANK_ACCOUNT_NO || '782701505244'}`,
+            margin + halfWidth + 25, currentY + 38);
+        doc.text(`IFSC Code: ${process.env.BANK_IFSC || 'ICIC0007827'}`,
+            margin + halfWidth + 25, currentY + 50);
+
+        // Signature Section
+        currentY += boxHeight + 20;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155')
+            .text('For ' + (process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO'),
+                margin + contentWidth - 160, currentY, {width: 160, align: 'right'});
+
+        currentY += 25;
+        doc.moveTo(margin + contentWidth - 140, currentY).lineTo(margin + contentWidth, currentY)
+            .strokeColor('#2563eb').lineWidth(1.5).stroke();
+        doc.fontSize(8).font('Helvetica').fillColor('#666666')
+            .text('Authorized Signatory', margin + contentWidth - 140, currentY + 3, {width: 140, align: 'right'});
+
+        const footerHeight = 48;
+        let footerY = doc.page.height - margin - footerHeight;
+
+        if (currentY + footerHeight + 20 > doc.page.height - margin) {
+            doc.addPage();
+            footerY = doc.page.height - margin - footerHeight;
+        }
+
+        doc.strokeColor('#cbd5f5').lineWidth(0.5)
+            .moveTo(margin, footerY - 8).lineTo(margin + contentWidth, footerY - 8).stroke();
+
+        doc.fontSize(10).font('Helvetica').fillColor('#6b7280');
+        doc.text('Thank you for your business.', margin, footerY);
+        doc.text('We appreciate the opportunity to serve you.', margin, footerY + 12);
+
+        const centerX = margin + contentWidth / 2 - 80;
+        doc.text('For service or billing queries:', centerX, footerY, {width: 160, align: 'center'});
+        doc.text(`Call: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, centerX, footerY + 12, {
+            width: 160,
+            align: 'center'
+        });
+
+        const rightX = margin + contentWidth - 220;
+        doc.fontSize(9);
+        doc.text('This is a computer-generated invoice', rightX, footerY, {width: 220, align: 'right'});
+        doc.text(`Invoice No: ${bill.billNumber}`, rightX, footerY + 12, {width: 220, align: 'right'});
+
+        doc.end();
+    } catch (error) {
+        console.error('PDF generation error:', error);
+        res.status(500).json({message: error.message});
     }
-
-    // Create PDF with clean simple design matching HTML template
-    const doc = new PDFDocument({ margin: 50, size: 'A4' });
-
-    // Set response headers
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Invoice-${bill.billNumber}.pdf`);
-
-    doc.pipe(res);
-
-    const pageWidth = 595.28;
-    const margin = 50;
-    const contentWidth = pageWidth - (margin * 2);
-
-    // Helper function to draw rounded box
-    const drawBox = (x, y, width, height, borderColor = '#dce4f5', fillColor = null) => {
-      doc.strokeColor(borderColor).lineWidth(1);
-      if (fillColor) {
-        doc.fillColor(fillColor);
-        doc.roundedRect(x, y, width, height, 3).fillAndStroke();
-      } else {
-        doc.roundedRect(x, y, width, height, 3).stroke();
-      }
-    };
-
-    // HEADER Section - matching HTML template
-    let currentY = margin;
-
-    // Company name on left
-    doc.fontSize(22).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin, currentY, { width: contentWidth - 120 });
-
-    // INVOICE on right - with sufficient width to prevent wrapping
-    doc.fontSize(26).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text('INVOICE', margin + contentWidth - 110, currentY, { width: 110, align: 'right' });
-
-    currentY += 28;
-
-    // Company details on left
-    doc.fontSize(11).font('Helvetica').fillColor('#333333');
-    doc.text(`PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`, margin, currentY);
-    currentY += 12;
-    doc.text(`Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin, currentY);
-    currentY += 12;
-    doc.text(process.env.COMPANY_BILL_ADDRESS || 'D.No-2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',
-             margin, currentY, { width: contentWidth - 120 });
-
-    // TAX INVOICE on right
-    doc.fontSize(10).font('Helvetica').fillColor('#555555')
-       .text('TAX INVOICE', margin + contentWidth - 100, currentY + 5, { width: 100, align: 'right' });
-
-    currentY += 25;
-
-    // Blue bottom border
-    doc.strokeColor('#1e5bb8').lineWidth(3)
-       .moveTo(margin, currentY).lineTo(margin + contentWidth, currentY).stroke();
-
-    currentY += 14;
-
-    // Invoice Details and Project - Two boxes side by side
-    const halfWidth = (contentWidth - 10) / 2;
-    const boxHeight = 45;
-
-    // Left box - Invoice Details
-    drawBox(margin, currentY, halfWidth, boxHeight, '#dce4f5');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text('Invoice Details', margin + 8, currentY + 6);
-
-    let leftBoxY = currentY + 22;
-    doc.fontSize(11).font('Helvetica').fillColor('#000000');
-    doc.text('Invoice No:', margin + 8, leftBoxY);
-    doc.font('Helvetica-Bold').text(bill.billNumber, margin + 75, leftBoxY);
-
-    doc.font('Helvetica').text('WO No:', margin + halfWidth / 2 + 10, leftBoxY);
-    doc.font('Helvetica-Bold').text(bill.customerWONumber || '', margin + halfWidth / 2 + 60, leftBoxY);
-
-    leftBoxY += 14;
-    doc.font('Helvetica').text('Invoice Date:', margin + 8, leftBoxY);
-    doc.font('Helvetica-Bold').text(new Date(bill.billDate).toLocaleDateString('en-IN'), margin + 85, leftBoxY);
-
-    doc.font('Helvetica').text('WO Date:', margin + halfWidth / 2 + 10, leftBoxY);
-    doc.font('Helvetica-Bold').text(bill.customerWODate ? new Date(bill.customerWODate).toLocaleDateString('en-IN') : '', margin + halfWidth / 2 + 65, leftBoxY);
-
-    // Right box - Project
-    drawBox(margin + halfWidth + 10, currentY, halfWidth, boxHeight, '#dce4f5');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text('Project', margin + halfWidth + 18, currentY + 6);
-
-    let rightBoxY = currentY + 22;
-    doc.fontSize(11).font('Helvetica').fillColor('#000000');
-    doc.text('Project:', margin + halfWidth + 18, rightBoxY);
-    doc.font('Helvetica-Bold').text(bill.projectName || '', margin + halfWidth + 65, rightBoxY, { width: halfWidth - 75 });
-
-    rightBoxY += 14;
-    doc.font('Helvetica').text('Reference:', margin + halfWidth + 18, rightBoxY);
-    doc.font('Helvetica-Bold').text(bill.referenceNo || '', margin + halfWidth + 75, rightBoxY);
-
-    currentY += boxHeight + 10;
-
-    // Bill To Section - Light blue header with white body
-    const billToHeight = 75;
-
-    // Header with light blue background
-    doc.roundedRect(margin, currentY, contentWidth, 18, 3).fillAndStroke('#f3f6ff', '#dce4f5');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text('Bill To', margin + 8, currentY + 5);
-
-    currentY += 18;
-
-    // Body with white background
-    doc.roundedRect(margin, currentY, contentWidth, billToHeight, 0).fillAndStroke('#ffffff', '#dce4f5');
-
-    let billToY = currentY + 8;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000')
-       .text('VK Building Services Pvt Ltd', margin + 8, billToY);
-
-    billToY += 14;
-    doc.fontSize(11).font('Helvetica').fillColor('#333333');
-    doc.text('1st Floor Krishe Sapphire, Sri Krishna Developers,', margin + 8, billToY);
-    billToY += 12;
-    doc.text('Sy No 88 Opp Vishal Peripherals,', margin + 8, billToY);
-    billToY += 12;
-    doc.text('Madhapur, Telangana, Hyderabad 500081', margin + 8, billToY);
-
-    billToY += 14;
-    doc.fontSize(11).font('Helvetica').text('GSTIN: 36AADCV1173D1ZL', margin + 8, billToY);
-
-    currentY += billToHeight + 10;
-
-    // Items Table - Clean design with light blue header
-    const tableTop = currentY;
-
-    // Table header with light blue background
-    doc.rect(margin, tableTop, contentWidth, 20).fillAndStroke('#f3f6ff', '#d0d7e6');
-
-    // Column widths - adjusted for better spacing
-    const col1X = margin + 5;
-    const col1W = 30;
-    const col2X = col1X + col1W;
-    const col2W = 190;
-    const col3X = col2X + col2W;
-    const col3W = 60;
-    const col4X = col3X + col3W;
-    const col4W = 45;
-    const col5X = col4X + col4W;
-    const col5W = 40;
-    const col6X = col5X + col5W;
-    const col6W = 60;
-    const col7X = col6X + col6W;
-    const col7W = 70; // Fixed width for Amount column to ensure proper display
-
-    // Table header text
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
-    doc.text('No', col1X, tableTop + 6, { width: col1W, align: 'center' });
-    doc.text('Description of Services', col2X, tableTop + 6, { width: col2W, align: 'left' });
-    doc.text('SAC', col3X, tableTop + 6, { width: col3W, align: 'center' });
-    doc.text('Unit', col4X, tableTop + 6, { width: col4W, align: 'center' });
-    doc.text('Qty', col5X, tableTop + 6, { width: col5W, align: 'center' });
-    doc.text('Rate (₹)', col6X, tableTop + 6, { width: col6W, align: 'center' });
-    doc.text('Amount (₹)', col7X, tableTop + 6, { width: col7W, align: 'right' });
-
-    let itemY = tableTop + 20;
-
-    // Table items
-    doc.fontSize(11).font('Helvetica').fillColor('#000000');
-    bill.items.forEach((item, index) => {
-      const rowHeight = 22;
-
-      // Row border
-      doc.rect(margin, itemY, contentWidth, rowHeight).stroke('#d0d7e6');
-
-      // Item data
-      doc.text((index + 1).toString(), col1X, itemY + 6, { width: col1W, align: 'center' });
-      doc.text(item.description || '', col2X + 3, itemY + 6, { width: col2W - 6, align: 'left' });
-      doc.text(item.sacCode || '', col3X, itemY + 6, { width: col3W, align: 'center' });
-      doc.text(item.unit || 'EA', col4X, itemY + 6, { width: col4W, align: 'center' });
-      doc.text((item.quantity || 0).toFixed(2), col5X, itemY + 6, { width: col5W, align: 'center' });
-      doc.text((item.rate || 0).toFixed(2), col6X, itemY + 6, { width: col6W, align: 'right' });
-      // Format amount properly with Indian number formatting
-      const formattedAmount = (item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      doc.text(formattedAmount, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
-
-      itemY += rowHeight;
-    });
-
-    // Totals Section - matching HTML template
-    const totalAmount = bill.totalAmount || 0;
-    const roundUp = bill.roundUp || 0;
-    const grandTotal = bill.grandTotal || 0;
-
-    const rowHeight = 20;
-
-    // Total row
-    doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#fafbff', '#d0d7e6');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
-    doc.text('Total', col6X, itemY + 6, { width: col6W, align: 'right' });
-    const formattedTotal = totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    doc.text(formattedTotal, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
-
-    itemY += rowHeight;
-
-    // Round Off row
-    doc.rect(margin, itemY, contentWidth, rowHeight).stroke('#d0d7e6');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
-    doc.text('Round Off', col6X, itemY + 6, { width: col6W, align: 'right' });
-    const formattedRoundUp = roundUp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    doc.text(formattedRoundUp, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
-
-    itemY += rowHeight;
-
-    // Grand Total row - Blue background
-    doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#1e5bb8', '#1e5bb8');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#ffffff');
-    doc.text('Grand Total', col6X, itemY + 6, { width: col6W, align: 'right' });
-    const formattedGrandTotal = grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    doc.text(formattedGrandTotal, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
-
-    itemY += rowHeight + 8;
-
-    // Amount in Words
-    currentY = itemY;
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
-    doc.text('Amount in Words: ', margin, currentY);
-    doc.font('Helvetica').text(bill.amountInWords || numberToWords(Math.round(grandTotal)), margin + 120, currentY, { width: contentWidth - 120 });
-
-    currentY += 20;
-
-    // Notes / Payment Terms and Bank Details - Two boxes side by side
-    const footerBoxHeight = 60;
-
-    // Left box - Notes / Payment Terms
-    drawBox(margin, currentY, halfWidth, footerBoxHeight, '#dce4f5');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text('Notes / Payment Terms', margin + 8, currentY + 6);
-
-    let notesY = currentY + 22;
-    doc.fontSize(10).font('Helvetica').fillColor('#333333');
-    if (bill.notes && bill.notes.trim()) {
-      doc.text(bill.notes, margin + 8, notesY, { width: halfWidth - 16 });
-      notesY += 18;
-    }
-    doc.font('Helvetica-Bold').text('Payment Terms: ', margin + 8, notesY);
-    doc.font('Helvetica').text(bill.paymentTerms || '30 Days credit', margin + 110, notesY);
-
-    // Right box - Bank Details
-    drawBox(margin + halfWidth + 10, currentY, halfWidth, footerBoxHeight, '#dce4f5');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text('Bank Details', margin + halfWidth + 18, currentY + 6);
-
-    let bankY = currentY + 22;
-    doc.fontSize(10).font('Helvetica').fillColor('#333333');
-    doc.text(`Account Name: ${process.env.BANK_ACCOUNT_NAME || 'M Picheswara Rao'}`, margin + halfWidth + 18, bankY);
-    bankY += 12;
-    doc.text(`Account No: ${process.env.BANK_ACCOUNT_NO || '782701505244'}`, margin + halfWidth + 18, bankY);
-    bankY += 12;
-    doc.text(`IFSC Code: ${process.env.BANK_IFSC || 'ICIC0007827'}`, margin + halfWidth + 18, bankY);
-
-    currentY += footerBoxHeight + 28;
-
-    // Signature Section
-    doc.fontSize(11).font('Helvetica').fillColor('#333333')
-       .text(`For ${process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO'}`, margin + contentWidth - 180, currentY, { width: 180, align: 'right' });
-
-    currentY += 28;
-    doc.strokeColor('#555555').lineWidth(1)
-       .moveTo(margin + contentWidth - 160, currentY).lineTo(margin + contentWidth, currentY).stroke();
-    doc.fontSize(10).font('Helvetica').fillColor('#333333')
-       .text('Authorised Signatory', margin + contentWidth - 160, currentY + 4, { width: 160, align: 'right' });
-
-    currentY += 30;
-
-    // Page Footer
-    doc.fontSize(10).font('Helvetica').fillColor('#6b7280');
-    doc.text('Thank you for your business.', margin, currentY);
-    doc.text('We appreciate the opportunity to serve you.', margin, currentY + 12);
-
-    doc.text(`For service or billing queries:`, margin + contentWidth / 2 - 80, currentY, { width: 160, align: 'center' });
-    doc.text(`Call: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin + contentWidth / 2 - 80, currentY + 12, { width: 160, align: 'center' });
-
-    doc.text('This is a computer-generated invoice', margin + contentWidth - 200, currentY, { width: 200, align: 'right' });
-    doc.text(`Invoice No: ${bill.billNumber}`, margin + contentWidth - 200, currentY + 12, { width: 200, align: 'right' });
-
-    doc.end();
-  } catch (error) {
-    console.error('PDF generation error:', error);
-    res.status(500).json({ message: error.message });
-  }
 });
 
 module.exports = router;

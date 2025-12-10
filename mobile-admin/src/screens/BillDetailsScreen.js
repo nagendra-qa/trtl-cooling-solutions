@@ -7,8 +7,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { billsAPI } from '../services/api';
+import * as FileSystem from 'expo-file-system';
 
 // Same theme colors as web app
 const COLORS = {
@@ -23,6 +26,7 @@ export default function BillDetailsScreen({ route, navigation }) {
   const { billId } = route.params;
   const [bill, setBill] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   useEffect(() => {
     fetchBillDetails();
@@ -37,6 +41,53 @@ export default function BillDetailsScreen({ route, navigation }) {
       navigation.goBack();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    setDownloadingPDF(true);
+    try {
+      const response = await billsAPI.downloadPDF(billId);
+
+      // Create file path in the document directory
+      const fileUri = FileSystem.documentDirectory + `Invoice-${bill.billNumber}.pdf`;
+
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(response.data);
+      reader.onloadend = async () => {
+        const base64data = reader.result.split(',')[1];
+
+        // Write the file
+        await FileSystem.writeAsStringAsync(fileUri, base64data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        Alert.alert(
+          'Success',
+          'PDF downloaded successfully!',
+          [
+            {
+              text: 'Open',
+              onPress: () => {
+                if (Platform.OS === 'ios') {
+                  FileSystem.getContentUriAsync(fileUri).then(cUri => {
+                    Linking.openURL(cUri);
+                  });
+                } else {
+                  Linking.openURL(fileUri);
+                }
+              }
+            },
+            { text: 'OK' }
+          ]
+        );
+      };
+    } catch (error) {
+      console.error('Download error:', error);
+      Alert.alert('Error', 'Failed to download PDF');
+    } finally {
+      setDownloadingPDF(false);
     }
   };
 
@@ -171,6 +222,21 @@ export default function BillDetailsScreen({ route, navigation }) {
             <Text style={styles.infoText}>{bill.paymentTerms}</Text>
           </View>
         )}
+
+        {/* Download PDF Button */}
+        <TouchableOpacity
+          style={[styles.downloadButton, downloadingPDF && styles.buttonDisabled]}
+          onPress={handleDownloadPDF}
+          disabled={downloadingPDF}
+        >
+          {downloadingPDF ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Text style={styles.downloadButtonText}>📥 Download PDF</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -325,5 +391,25 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 14,
     color: COLORS.darkGray,
+  },
+  downloadButton: {
+    backgroundColor: COLORS.primaryBlue,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 16,
+    shadowColor: COLORS.primaryBlue,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  downloadButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonDisabled: {
+    backgroundColor: '#9CA3AF',
   },
 });
