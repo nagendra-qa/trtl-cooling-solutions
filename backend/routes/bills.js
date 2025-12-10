@@ -258,7 +258,7 @@ router.get('/:id/pdf', async (req, res) => {
             doc.text('REFERENCE:', margin + halfWidth + 25, rightY);
 
             doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.referenceNo, margin + halfWidth + 80, rightY); // SAME alignment
+            doc.text(bill.referenceNo, margin + halfWidth + 90, rightY); // SAME alignment
         }
 
         currentY += 110;
@@ -336,6 +336,7 @@ router.get('/:id/pdf', async (req, res) => {
         // Add blank row for comments - More prominent
         const commentsRowHeight = 50;
         doc.rect(margin, itemY, contentWidth, commentsRowHeight).fillAndStroke('#fef3c7', '#cbd5e1');
+        doc.rect(margin, itemY, contentWidth, commentsRowHeight).stroke('#cbd5e1');
 
         // Draw vertical line after No. column
         doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
@@ -363,103 +364,59 @@ router.get('/:id/pdf', async (req, res) => {
         itemY += commentsRowHeight;
 
 // ------------------------------
-// TOTALS, ROUND-OFF & GRAND TOTAL
-// ------------------------------
-        const items = Array.isArray(bill.items) ? bill.items : [];
-
-// Compute numeric totalAmount (fallback to qty*rate if amount missing)
-        const totalAmount = items.reduce((sum, it) => {
-            const amt = Number(it.amount);
-            if (!isNaN(amt)) return sum + amt;
-            const qty = Number(it.quantity || 0);
-            const rate = Number(it.rate || 0);
-            return sum + (qty * rate);
-        }, 0);
-
-// Fractional part
-        const fraction = totalAmount - Math.floor(totalAmount);
-
-// Apply your rule: >.50 round up, <=.50 round down
-        let autoRoundedTotal = (fraction > 0.50)
-            ? Math.ceil(totalAmount)
-            : Math.floor(totalAmount);
-
-// Auto round-off
-        const calculatedRoundOff = autoRoundedTotal - totalAmount;
-
-// Use DB override if provided
-        let roundUpNum = (bill.roundUp !== undefined && bill.roundUp !== null)
-            ? Number(bill.roundUp)
-            : calculatedRoundOff;
-
-        if (isNaN(roundUpNum)) roundUpNum = calculatedRoundOff;
-
-// Final values
-        const grandTotal = totalAmount + roundUpNum;
-
-// ------------------------------
-// FORMATTED VALUES (with commas)
-// ------------------------------
-        const formattedTotal = totalAmount.toLocaleString('en-IN', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-
-        const formattedRound = (roundUpNum >= 0 ? '+' : '-') +
-            Math.abs(roundUpNum).toLocaleString('en-IN', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-
-        const formattedGrand = grandTotal.toLocaleString('en-IN', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-
-// ------------------------------
-// DRAW TOTALS BLOCK
+// DRAW TOTALS BLOCK (compact boxes)
 // ------------------------------
         const totalsY = itemY;
-        let grandTotalY = totalsY;
+        const labelX = margin + 320;      // current label x in your code
+        const valueX = margin + 420;      // value x (we right-align inside box)
+        const boxLeft = margin + 300;     // left edge of totals box area (tweak as needed)
+        const boxWidth = 220;             // width of the totals box (tweak as needed)
+        const smallRowH = 24;
+        const grandRowH = 30;
 
-// TOTAL
-        doc.rect(margin, totalsY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
+// Helper: draw filled rect and stroke on top (so border stays visible)
+        function fillThenStroke(x, y, w, h, fillColor, strokeColor) {
+            doc.save();
+            doc.rect(x, y, w, h).fill(fillColor);
+            doc.rect(x, y, w, h).stroke(strokeColor);
+            doc.restore();
+        }
+
+// TOTAL (compact box)
+        fillThenStroke(boxLeft, totalsY, boxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('Total', margin + 320, totalsY + 7);
-        doc.text('Rs. ' + formattedTotal, margin + 420, totalsY + 7, {width: 95, align: 'right'});
+        doc.text('Total', labelX, totalsY + 7);
+        doc.text('Rs. ' + formattedTotal, valueX, totalsY + 7, {width: 95, align: 'right'});
 
-// ROUND OFF
-        const roundOffY = totalsY + 24;
-
-        doc.rect(margin, roundOffY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
+// ROUND OFF (compact box)
+        const roundOffY = totalsY + smallRowH;
+        fillThenStroke(boxLeft, roundOffY, boxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('Round Off', margin + 320, roundOffY + 7);
-        doc.text('Rs. ' + formattedRound, margin + 420, roundOffY + 7, {width: 95, align: 'right'});
+        doc.text('Round Off', labelX, roundOffY + 7);
+        doc.text('Rs. ' + formattedRound, valueX, roundOffY + 7, {width: 95, align: 'right'});
 
-        grandTotalY = roundOffY + 24;
+// GRAND TOTAL (keeps the bold blue but limited to boxWidth)
+        const grandTotalY = roundOffY + smallRowH;
+        doc.save();
+        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).fill('#1e40af');  // fill
+        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).stroke('#1e40af'); // stroke on top (same color keeps it solid)
+        doc.restore();
 
-// GRAND TOTAL
-        doc.rect(margin, grandTotalY, contentWidth, 30).fillAndStroke('#1e40af', '#1e40af');
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
-        doc.text('GRAND TOTAL:', margin + 320, grandTotalY + 9);
-        doc.text('Rs. ' + formattedGrand, margin + 420, grandTotalY + 9, {width: 95, align: 'right'});
+        doc.text('GRAND TOTAL:', labelX, grandTotalY + 9);
+        doc.text('Rs. ' + formattedGrand, valueX, grandTotalY + 9, {width: 95, align: 'right'});
 
-// AMOUNT IN WORDS
-        currentY = grandTotalY + 40;
-        doc.rect(margin, currentY, contentWidth, 32).fillAndStroke('#f8fafc', '#cbd5e1');
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155')
-            .text('Amount in Words:', margin + 10, currentY + 8);
+// AMOUNT IN WORDS (keeps full width, but stroke on top so border remains)
+        let currentZX = grandTotalY + grandRowH + 10;
+        const wordsH = 32;
+        doc.rect(margin, currentZX, contentWidth, wordsH).fillAndStroke('#f8fafc', '#cbd5e1');
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155').text('Amount in Words:', margin + 10, currentZX + 8);
 
         const amountInWords = bill.amountInWords || numberToWords(Math.round(grandTotal));
-        doc.fontSize(9).font('Helvetica').fillColor('#000000')
-            .text(amountInWords, margin + 10, currentY + 19, {width: contentWidth - 20});
+        doc.fontSize(9).font('Helvetica').fillColor('#000000').text(amountInWords, margin + 10, currentY + 19, {width: contentWidth - 20});
 
-        itemY = currentY + 32;
+        itemY = currentZX + wordsH + 8;
 
-
-        // Payment Terms and Bank Details
-        currentY += 42;
-        const boxHeight = 70;
 
         // Payment Terms
         drawBox(margin, currentY, halfWidth, boxHeight, '#cbd5e1');
