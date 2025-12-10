@@ -57,6 +57,13 @@ router.post('/', async (req, res) => {
   try {
     const billData = req.body;
 
+    // Auto-calculate round-off and grand total
+    if (billData.totalAmount) {
+      const roundedGrandTotal = Math.round(billData.totalAmount);
+      billData.roundUp = roundedGrandTotal - billData.totalAmount;
+      billData.grandTotal = roundedGrandTotal;
+    }
+
     // Auto-calculate amount in words if not provided
     if (!billData.amountInWords && billData.grandTotal) {
       billData.amountInWords = numberToWords(billData.grandTotal);
@@ -78,6 +85,13 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const billData = req.body;
+
+    // Auto-calculate round-off and grand total
+    if (billData.totalAmount) {
+      const roundedGrandTotal = Math.round(billData.totalAmount);
+      billData.roundUp = roundedGrandTotal - billData.totalAmount;
+      billData.grandTotal = roundedGrandTotal;
+    }
 
     // Auto-calculate amount in words if not provided
     if (!billData.amountInWords && billData.grandTotal) {
@@ -153,11 +167,11 @@ router.get('/:id/pdf', async (req, res) => {
 
     // Company name on left
     doc.fontSize(22).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin, currentY);
+       .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin, currentY, { width: contentWidth - 120 });
 
-    // INVOICE on right
+    // INVOICE on right - with sufficient width to prevent wrapping
     doc.fontSize(26).font('Helvetica-Bold').fillColor('#1e5bb8')
-       .text('INVOICE', margin + contentWidth - 100, currentY, { width: 100, align: 'right' });
+       .text('INVOICE', margin + contentWidth - 110, currentY, { width: 110, align: 'right' });
 
     currentY += 28;
 
@@ -258,21 +272,21 @@ router.get('/:id/pdf', async (req, res) => {
     // Table header with light blue background
     doc.rect(margin, tableTop, contentWidth, 20).fillAndStroke('#f3f6ff', '#d0d7e6');
 
-    // Column widths
+    // Column widths - adjusted for better spacing
     const col1X = margin + 5;
     const col1W = 30;
     const col2X = col1X + col1W;
-    const col2W = 210;
+    const col2W = 190;
     const col3X = col2X + col2W;
     const col3W = 60;
     const col4X = col3X + col3W;
-    const col4W = 50;
+    const col4W = 45;
     const col5X = col4X + col4W;
-    const col5W = 50;
+    const col5W = 40;
     const col6X = col5X + col5W;
-    const col6W = 70;
+    const col6W = 60;
     const col7X = col6X + col6W;
-    const col7W = contentWidth - (col1W + col2W + col3W + col4W + col5W + col6W);
+    const col7W = 70; // Fixed width for Amount column to ensure proper display
 
     // Table header text
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
@@ -301,7 +315,9 @@ router.get('/:id/pdf', async (req, res) => {
       doc.text(item.unit || 'EA', col4X, itemY + 6, { width: col4W, align: 'center' });
       doc.text((item.quantity || 0).toFixed(2), col5X, itemY + 6, { width: col5W, align: 'center' });
       doc.text((item.rate || 0).toFixed(2), col6X, itemY + 6, { width: col6W, align: 'right' });
-      doc.text((item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), col7X - 5, itemY + 6, { width: col7W, align: 'right' });
+      // Format amount properly with Indian number formatting
+      const formattedAmount = (item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      doc.text(formattedAmount, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
 
       itemY += rowHeight;
     });
@@ -317,7 +333,8 @@ router.get('/:id/pdf', async (req, res) => {
     doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#fafbff', '#d0d7e6');
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
     doc.text('Total', col6X, itemY + 6, { width: col6W, align: 'right' });
-    doc.text(totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), col7X - 5, itemY + 6, { width: col7W, align: 'right' });
+    const formattedTotal = totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    doc.text(formattedTotal, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
 
     itemY += rowHeight;
 
@@ -325,7 +342,8 @@ router.get('/:id/pdf', async (req, res) => {
     doc.rect(margin, itemY, contentWidth, rowHeight).stroke('#d0d7e6');
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000');
     doc.text('Round Off', col6X, itemY + 6, { width: col6W, align: 'right' });
-    doc.text(roundUp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), col7X - 5, itemY + 6, { width: col7W, align: 'right' });
+    const formattedRoundUp = roundUp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    doc.text(formattedRoundUp, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
 
     itemY += rowHeight;
 
@@ -333,7 +351,8 @@ router.get('/:id/pdf', async (req, res) => {
     doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#1e5bb8', '#1e5bb8');
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#ffffff');
     doc.text('Grand Total', col6X, itemY + 6, { width: col6W, align: 'right' });
-    doc.text(grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), col7X - 5, itemY + 6, { width: col7W, align: 'right' });
+    const formattedGrandTotal = grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    doc.text(formattedGrandTotal, col7X, itemY + 6, { width: col7W - 5, align: 'right' });
 
     itemY += rowHeight + 8;
 
@@ -392,12 +411,12 @@ router.get('/:id/pdf', async (req, res) => {
     // Page Footer
     doc.fontSize(10).font('Helvetica').fillColor('#6b7280');
     doc.text('Thank you for your business.', margin, currentY);
-    doc.text('Please keep this invoice for your records.', margin, currentY + 12);
+    doc.text('We appreciate the opportunity to serve you.', margin, currentY + 12);
 
     doc.text(`For service or billing queries:`, margin + contentWidth / 2 - 80, currentY, { width: 160, align: 'center' });
     doc.text(`Call: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin + contentWidth / 2 - 80, currentY + 12, { width: 160, align: 'center' });
 
-    doc.text('Generated by AC Service Application', margin + contentWidth - 200, currentY, { width: 200, align: 'right' });
+    doc.text('This is a computer-generated invoice', margin + contentWidth - 200, currentY, { width: 200, align: 'right' });
     doc.text(`Invoice No: ${bill.billNumber}`, margin + contentWidth - 200, currentY + 12, { width: 200, align: 'right' });
 
     doc.end();
