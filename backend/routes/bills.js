@@ -193,12 +193,12 @@ router.get('/:id/pdf', async (req, res) => {
         // Left: Invoice Info
         drawBox(margin, currentY, halfWidth, 50, '#cbd5e1');
         doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('INVOICE NUMBER:', margin + 10, currentY + 12);
+        doc.text('INVOICE NUMBER :', margin + 10, currentY + 12);
         doc.font('Helvetica').fillColor('#000000');
         doc.text(bill.billNumber, margin + 100, currentY + 12);
 
         doc.font('Helvetica-Bold').fillColor('#334155');
-        doc.text('INVOICE DATE:', margin + 10, currentY + 28);
+        doc.text('INVOICE DATE :', margin + 10, currentY + 28);
         doc.font('Helvetica').fillColor('#000000');
         doc.text(new Date(bill.billDate).toLocaleDateString('en-GB'), margin + 100, currentY + 28);
 
@@ -206,13 +206,13 @@ router.get('/:id/pdf', async (req, res) => {
         drawBox(margin + halfWidth + 15, currentY, halfWidth, 50, '#cbd5e1');
         if (bill.customerWONumber) {
             doc.font('Helvetica-Bold').fillColor('#334155');
-            doc.text('WORK ORDER NO:', margin + halfWidth + 25, currentY + 12);
+            doc.text('WORK ORDER NO :', margin + halfWidth + 25, currentY + 12);
             doc.font('Helvetica').fillColor('#000000');
             doc.text(bill.customerWONumber, margin + halfWidth + 120, currentY + 12);
         }
         if (bill.customerWODate) {
             doc.font('Helvetica-Bold').fillColor('#334155');
-            doc.text('WO DATE:', margin + halfWidth + 25, currentY + 28);
+            doc.text('WO DATE :', margin + halfWidth + 25, currentY + 28);
             doc.font('Helvetica').fillColor('#000000');
             doc.text(new Date(bill.customerWODate).toLocaleDateString('en-GB'), margin + halfWidth + 120, currentY + 28);
         }
@@ -245,7 +245,7 @@ router.get('/:id/pdf', async (req, res) => {
         // PROJECT
         if (bill.projectName) {
             doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
-            doc.text('PROJECT:', margin + halfWidth + 25, rightY);
+            doc.text('PROJECT :', margin + halfWidth + 25, rightY);
 
             doc.font('Helvetica').fillColor('#000000');
             doc.text(bill.projectName, margin + halfWidth + 80, rightY); // Adjust this
@@ -255,7 +255,7 @@ router.get('/:id/pdf', async (req, res) => {
 // REFERENCE
         if (bill.referenceNo) {
             doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
-            doc.text('REFERENCE:', margin + halfWidth + 25, rightY);
+            doc.text('REFERENCE :', margin + halfWidth + 25, rightY);
 
             doc.font('Helvetica').fillColor('#000000');
             doc.text(bill.referenceNo, margin + halfWidth + 90, rightY); // SAME alignment
@@ -333,35 +333,75 @@ router.get('/:id/pdf', async (req, res) => {
             itemY += rowHeight;
         });
 
-        // Add blank row for comments - More prominent
-        const commentsRowHeight = 50;
-        doc.rect(margin, itemY, contentWidth, commentsRowHeight).fillAndStroke('#fef3c7', '#cbd5e1');
-        doc.rect(margin, itemY, contentWidth, commentsRowHeight).stroke('#cbd5e1');
+        // ------------------------------
+// Add blank row for comments - auto-height and crisp borders
+// ------------------------------
+        (function () {
+            // Prepare text and fonts used for measurement
+            const labelText = 'Comments / Notes:';
+            const notesText = (bill.notes && bill.notes.trim() !== '') ? bill.notes : '(Space for additional remarks or instructions)';
 
-        // Draw vertical line after No. column
-        doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
+            // Label uses bold 9 (or 10 for placeholder) — set font/size before measuring
+            doc.font('Helvetica-Bold').fontSize(9);
+            const labelWidth = 240;
+            const labelHeight = doc.heightOfString(labelText, {width: labelWidth});
 
-        // Draw all column lines for comments row
-        doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + commentsRowHeight).stroke();
-        doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + commentsRowHeight).stroke();
-        doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + commentsRowHeight).stroke();
-        doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + commentsRowHeight).stroke();
+            // Notes use normal font (or oblique for placeholder). We'll measure with same font/size you'll draw.
+            if (bill.notes && bill.notes.trim() !== '') {
+                doc.font('Helvetica').fontSize(9);
+            } else {
+                doc.font('Helvetica-Oblique').fontSize(8);
+            }
 
-        // Display the notes/comments if provided
-        if (bill.notes && bill.notes.trim() !== '') {
-            doc.fontSize(9).font('Helvetica-Bold').fillColor('#92400e');
-            doc.text('Comments / Notes:', col2, itemY + 8, {width: 240});
-            doc.fontSize(9).font('Helvetica').fillColor('#000000');
-            doc.text(bill.notes, col2, itemY + 22, {width: contentWidth - 75});
-        } else {
-            // Show placeholder if no notes
-            doc.fontSize(10).font('Helvetica-Bold').fillColor('#92400e');
-            doc.text('Comments / Notes:', col2, itemY + 10, {width: 240});
-            doc.fontSize(8).font('Helvetica-Oblique').fillColor('#78716c');
-            doc.text('(Space for additional remarks or instructions)', col2, itemY + 22, {width: 240});
-        }
+            const notesAvailableWidth = contentWidth - 75; // same as your text call
+            const notesHeight = doc.heightOfString(notesText, {width: notesAvailableWidth});
 
-        itemY += commentsRowHeight;
+            // padding: top + between label & notes + bottom
+            const paddingTop = 8;
+            const paddingBetween = 6;
+            const paddingBottom = 8;
+
+            const computedHeight = Math.ceil(labelHeight + paddingTop + paddingBetween + notesHeight + paddingBottom);
+
+            // Minimum height (keeps previous look)
+            const commentsRowHeight = Math.max(50, computedHeight);
+
+            // Ensure fill is drawn first then stroke (so stroke is visible)
+            doc.fillColor('#fef3c7');
+            doc.rect(margin, itemY, contentWidth, commentsRowHeight).fill();
+
+            doc.strokeColor('#cbd5e1');
+            doc.rect(margin, itemY, contentWidth, commentsRowHeight).stroke();
+
+            // Draw vertical line after No. column
+            doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
+
+            // Draw all column lines for comments row
+            doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + commentsRowHeight).stroke();
+            doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + commentsRowHeight).stroke();
+            doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + commentsRowHeight).stroke();
+            doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + commentsRowHeight).stroke();
+
+            // Draw the label and notes using the same measurement choices
+            if (bill.notes && bill.notes.trim() !== '') {
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#92400e');
+                doc.text(labelText, col2, itemY + paddingTop, {width: labelWidth});
+
+                doc.fontSize(9).font('Helvetica').fillColor('#000000');
+                // place notes below label (use labelHeight + paddingBetween)
+                doc.text(bill.notes, col2, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
+            } else {
+                // placeholder style
+                doc.fontSize(10).font('Helvetica-Bold').fillColor('#92400e');
+                doc.text(labelText, col2, itemY + paddingTop, {width: labelWidth});
+
+                doc.fontSize(8).font('Helvetica-Oblique').fillColor('#78716c');
+                doc.text(notesText, col2, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
+            }
+
+            // advance itemY by the computed height
+            itemY += commentsRowHeight;
+        })();
 
 // ------------------------------
 // TOTALS, ROUND-OFF & GRAND TOTAL
@@ -418,15 +458,22 @@ router.get('/:id/pdf', async (req, res) => {
         });
 
 // ------------------------------
-// DRAW TOTALS BLOCK (compact fixed boxes aligned to the right)
+// DRAW TOTALS BLOCK (compact fixed boxes aligned to the right INSIDE table)
 // ------------------------------
         const totalsY = itemY;
 
 // Positioning: keep your original text Xs but box the background to a compact region
         const labelX = margin + 320;      // label x (same as your original)
         const valueX = margin + 420;      // value x (same as your original)
-        const boxLeft = margin + 300;     // left edge of the compact totals box area (tweak if needed)
-        const boxWidth = 220;             // width of the compact totals area (tweak if needed)
+        let boxWidth = 220;               // preferred width of the compact totals area
+
+// Ensure boxWidth never exceeds contentWidth minus some padding
+        const innerPadding = 10; // gap between right table edge and box
+        boxWidth = Math.min(boxWidth, contentWidth - (innerPadding * 2));
+
+// Right-align the box inside the table content area so it won't go out of bounds
+        const boxLeft = margin + contentWidth - boxWidth - innerPadding;
+
         const smallRowH = 24;
         const grandRowH = 30;
 
@@ -441,20 +488,24 @@ router.get('/:id/pdf', async (req, res) => {
             doc.restore();
         }
 
-// TOTAL (compact box)
+// Compute effective text X positions so labels/values don't draw outside the box
+        const effectiveLabelX = Math.max(labelX, boxLeft + 8);
+        const effectiveValueX = Math.min(valueX, boxLeft + boxWidth - 8);
+
+        // TOTAL (compact box)
         fillThenStroke(boxLeft, totalsY, boxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('Total', labelX, totalsY + 7);
-        doc.text('Rs. ' + formattedTotal, valueX, totalsY + 7, {width: 95, align: 'right'});
+        doc.text('Total', effectiveLabelX, totalsY + 7);
+        doc.text('Rs. ' + formattedTotal, effectiveValueX, totalsY + 7, {width: 95, align: 'right'});
 
-// ROUND OFF (compact box)
+        // ROUND OFF (compact box)
         const roundOffY = totalsY + smallRowH;
         fillThenStroke(boxLeft, roundOffY, boxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('Round Off', labelX, roundOffY + 7);
-        doc.text('Rs. ' + formattedRound, valueX, roundOffY + 7, {width: 95, align: 'right'});
+        doc.text('Round Off', effectiveLabelX, roundOffY + 7);
+        doc.text('Rs. ' + formattedRound, effectiveValueX, roundOffY + 7, {width: 95, align: 'right'});
 
-// GRAND TOTAL (boxed blue, limited width)
+        // GRAND TOTAL (boxed blue, limited width)
         const grandTotalY = roundOffY + smallRowH;
         doc.save();
         doc.fillColor('#1e40af');
@@ -464,10 +515,10 @@ router.get('/:id/pdf', async (req, res) => {
         doc.restore();
 
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
-        doc.text('GRAND TOTAL:', labelX, grandTotalY + 9);
-        doc.text('Rs. ' + formattedGrand, valueX, grandTotalY + 9, {width: 95, align: 'right'});
+        doc.text('GRAND TOTAL', effectiveLabelX, grandTotalY + 9);
+        doc.text('Rs. ' + formattedGrand, effectiveValueX, grandTotalY + 9, {width: 95, align: 'right'});
 
-// AMOUNT IN WORDS (keeps full width area but stroke drawn after fill so border is crisp)
+     // AMOUNT IN WORDS (keeps full width area but stroke drawn after fill so border is crisp)
         currentY = grandTotalY + grandRowH + 10;
         const wordsH = 32;
         doc.fillColor('#f8fafc');
@@ -483,8 +534,9 @@ router.get('/:id/pdf', async (req, res) => {
         doc.fontSize(9).font('Helvetica').fillColor('#000000')
             .text(amountInWords, margin + 10, currentY + 19, {width: contentWidth - 20});
 
-// update itemY to continue further drawing
+     // update itemY to continue further drawing
         itemY = currentY + wordsH + 8;
+
 
 // Payment Terms and Bank Details
         currentY += 42;
