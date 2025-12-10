@@ -248,7 +248,7 @@ router.get('/:id/pdf', async (req, res) => {
             doc.text('PROJECT:', margin + halfWidth + 25, rightY);
 
             doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.projectName, margin + halfWidth + 130, rightY); // Adjust this
+            doc.text(bill.projectName, margin + halfWidth + 80, rightY); // Adjust this
             rightY += 14;
         }
 
@@ -258,7 +258,7 @@ router.get('/:id/pdf', async (req, res) => {
             doc.text('REFERENCE:', margin + halfWidth + 25, rightY);
 
             doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.referenceNo, margin + halfWidth + 130, rightY); // SAME alignment
+            doc.text(bill.referenceNo, margin + halfWidth + 80, rightY); // SAME alignment
         }
 
         currentY += 110;
@@ -357,10 +357,10 @@ router.get('/:id/pdf', async (req, res) => {
             doc.fontSize(10).font('Helvetica-Bold').fillColor('#92400e');
             doc.text('Comments / Notes:', col2, itemY + 10, {width: 240});
             doc.fontSize(8).font('Helvetica-Oblique').fillColor('#78716c');
-            doc.text('(Space for additional remarks or instructions)', col2, itemY + 26, {width: 240});
+            doc.text('(Space for additional remarks or instructions)', col2, itemY + 22, {width: 240});
         }
 
-        itemY += commentsRowHeight + 12;
+        itemY += commentsRowHeight;
 
 // ------------------------------
 // TOTALS, ROUND-OFF & GRAND TOTAL
