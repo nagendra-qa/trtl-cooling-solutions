@@ -364,21 +364,80 @@ router.get('/:id/pdf', async (req, res) => {
         itemY += commentsRowHeight;
 
 // ------------------------------
-// DRAW TOTALS BLOCK (compact boxes)
+// TOTALS, ROUND-OFF & GRAND TOTAL
+// ------------------------------
+        const items = Array.isArray(bill.items) ? bill.items : [];
+
+// Compute numeric totalAmount (fallback to qty*rate if amount missing)
+        const totalAmount = items.reduce((sum, it) => {
+            const amt = Number(it.amount);
+            if (!isNaN(amt)) return sum + amt;
+            const qty = Number(it.quantity || 0);
+            const rate = Number(it.rate || 0);
+            return sum + (qty * rate);
+        }, 0);
+
+// Fractional part
+        const fraction = totalAmount - Math.floor(totalAmount);
+
+// Apply your rule: >.50 round up, <=.50 round down
+        let autoRoundedTotal = (fraction > 0.50)
+            ? Math.ceil(totalAmount)
+            : Math.floor(totalAmount);
+
+// Auto round-off
+        const calculatedRoundOff = autoRoundedTotal - totalAmount;
+
+// Use DB override if provided
+        let roundUpNum = (bill.roundUp !== undefined && bill.roundUp !== null)
+            ? Number(bill.roundUp)
+            : calculatedRoundOff;
+
+        if (isNaN(roundUpNum)) roundUpNum = calculatedRoundOff;
+
+// Final values
+        const grandTotal = totalAmount + roundUpNum;
+
+// ------------------------------
+// FORMATTED VALUES (with commas)
+// ------------------------------
+        const formattedTotal = totalAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+        const formattedRound = (roundUpNum >= 0 ? '+' : '-') +
+            Math.abs(roundUpNum).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+        const formattedGrand = grandTotal.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+// ------------------------------
+// DRAW TOTALS BLOCK (compact fixed boxes aligned to the right)
 // ------------------------------
         const totalsY = itemY;
-        const labelX = margin + 320;      // current label x in your code
-        const valueX = margin + 420;      // value x (we right-align inside box)
-        const boxLeft = margin + 300;     // left edge of totals box area (tweak as needed)
-        const boxWidth = 220;             // width of the totals box (tweak as needed)
+
+// Positioning: keep your original text Xs but box the background to a compact region
+        const labelX = margin + 320;      // label x (same as your original)
+        const valueX = margin + 420;      // value x (same as your original)
+        const boxLeft = margin + 300;     // left edge of the compact totals box area (tweak if needed)
+        const boxWidth = 220;             // width of the compact totals area (tweak if needed)
         const smallRowH = 24;
         const grandRowH = 30;
 
-// Helper: draw filled rect and stroke on top (so border stays visible)
+// Helper: fill then stroke so stroke is drawn on top (prevents fill hiding borders)
         function fillThenStroke(x, y, w, h, fillColor, strokeColor) {
             doc.save();
-            doc.rect(x, y, w, h).fill(fillColor);
-            doc.rect(x, y, w, h).stroke(strokeColor);
+            doc.fillColor(fillColor);
+            doc.rect(x, y, w, h).fill();
+
+            doc.strokeColor(strokeColor);
+            doc.rect(x, y, w, h).stroke();
             doc.restore();
         }
 
@@ -395,27 +454,41 @@ router.get('/:id/pdf', async (req, res) => {
         doc.text('Round Off', labelX, roundOffY + 7);
         doc.text('Rs. ' + formattedRound, valueX, roundOffY + 7, {width: 95, align: 'right'});
 
-// GRAND TOTAL (keeps the bold blue but limited to boxWidth)
+// GRAND TOTAL (boxed blue, limited width)
         const grandTotalY = roundOffY + smallRowH;
         doc.save();
-        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).fill('#1e40af');  // fill
-        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).stroke('#1e40af'); // stroke on top (same color keeps it solid)
+        doc.fillColor('#1e40af');
+        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).fill();
+        doc.strokeColor('#1e40af');
+        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).stroke();
         doc.restore();
 
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
         doc.text('GRAND TOTAL:', labelX, grandTotalY + 9);
         doc.text('Rs. ' + formattedGrand, valueX, grandTotalY + 9, {width: 95, align: 'right'});
 
-// AMOUNT IN WORDS (keeps full width, but stroke on top so border remains)
-        let currentZX = grandTotalY + grandRowH + 10;
+// AMOUNT IN WORDS (keeps full width area but stroke drawn after fill so border is crisp)
+        currentY = grandTotalY + grandRowH + 10;
         const wordsH = 32;
-        doc.rect(margin, currentZX, contentWidth, wordsH).fillAndStroke('#f8fafc', '#cbd5e1');
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155').text('Amount in Words:', margin + 10, currentZX + 8);
+        doc.fillColor('#f8fafc');
+        doc.rect(margin, currentY, contentWidth, wordsH).fill();
+
+        doc.strokeColor('#cbd5e1');
+        doc.rect(margin, currentY, contentWidth, wordsH).stroke();
+
+        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155')
+            .text('Amount in Words:', margin + 10, currentY + 8);
 
         const amountInWords = bill.amountInWords || numberToWords(Math.round(grandTotal));
-        doc.fontSize(9).font('Helvetica').fillColor('#000000').text(amountInWords, margin + 10, currentY + 19, {width: contentWidth - 20});
+        doc.fontSize(9).font('Helvetica').fillColor('#000000')
+            .text(amountInWords, margin + 10, currentY + 19, {width: contentWidth - 20});
 
-        itemY = currentZX + wordsH + 8;
+// update itemY to continue further drawing
+        itemY = currentY + wordsH + 8;
+
+// Payment Terms and Bank Details
+        currentY += 42;
+        const boxHeight = 70;
 
 
         // Payment Terms
