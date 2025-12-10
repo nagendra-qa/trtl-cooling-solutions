@@ -142,16 +142,40 @@ router.get('/:id/pdf', async (req, res) => {
             doc.strokeColor(color).lineWidth(1).rect(x, y, width, height).stroke();
         };
 
-        // Company Header - Simple & Clean
-        doc.fontSize(22).font('Helvetica-Bold').fillColor('#2563eb')
+        // =========================
+// COMPANY HEADER (UPDATED CLEAN DESIGN)
+// =========================
+
+// Company Name
+        doc.fontSize(22)
+            .font('Helvetica-Bold')
+            .fillColor('#2563eb')
             .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin, margin);
 
-        doc.fontSize(9).font('Helvetica').fillColor('#666666');
-        let headerY = margin + 28;
-        doc.text(`PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`, margin, headerY);
-        doc.text(`Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, margin + 180, headerY);
-        doc.text(process.env.COMPANY_BILL_ADDRESS || 'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',
-            margin, headerY + 14, {width: contentWidth});
+// Details Text Style
+        doc.fontSize(10)
+            .font('Helvetica')
+            .fillColor('#666666');
+
+        let headerY = margin + 30;
+
+// PAN + Mobile (Same Line, Clean Spacing)
+        const panText = `PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`;
+        const mobileText = `Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`;
+
+        doc.text(`${panText}    |    ${mobileText}`, margin, headerY, {
+            width: contentWidth
+        });
+
+// Address (Full Width Below)
+        doc.text(
+            process.env.COMPANY_BILL_ADDRESS ||
+            'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',
+            margin,
+            headerY + 16,
+            {width: contentWidth}
+        );
+
 
         // Horizontal line separator
         doc.strokeColor('#2563eb').lineWidth(2)
@@ -218,19 +242,23 @@ router.get('/:id/pdf', async (req, res) => {
         drawBox(margin + halfWidth + 15, currentY, halfWidth, 100, '#cbd5e1');
         let rightY = currentY + 24;
 
+        // PROJECT
         if (bill.projectName) {
             doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
             doc.text('PROJECT:', margin + halfWidth + 25, rightY);
+
             doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.projectName, margin + halfWidth + 75, rightY, {width: halfWidth - 80});
-            rightY += 12;
+            doc.text(bill.projectName, margin + halfWidth + 130, rightY); // Adjust this
+            rightY += 14;
         }
 
+// REFERENCE
         if (bill.referenceNo) {
             doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
             doc.text('REFERENCE:', margin + halfWidth + 25, rightY);
+
             doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.referenceNo, margin + halfWidth + 75, rightY);
+            doc.text(bill.referenceNo, margin + halfWidth + 130, rightY); // SAME alignment
         }
 
         currentY += 110;
@@ -332,109 +360,101 @@ router.get('/:id/pdf', async (req, res) => {
             doc.text('(Space for additional remarks or instructions)', col2, itemY + 26, {width: 240});
         }
 
-        itemY += commentsRowHeight;
+        itemY += commentsRowHeight + 12;
 
-        // ------------------------------------------------------------
-//  CALCULATE TOTALS WITH CUSTOM ROUNDING RULE
-// ------------------------------------------------------------
+// ------------------------------
+// TOTALS, ROUND-OFF & GRAND TOTAL
+// ------------------------------
+        const items = Array.isArray(bill.items) ? bill.items : [];
 
-// Total of all amounts
-        const totalAmount = bill.items.reduce((sum, item) => sum + (item.amount || 0), 0);
+// Compute numeric totalAmount (fallback to qty*rate if amount missing)
+        const totalAmount = items.reduce((sum, it) => {
+            const amt = Number(it.amount);
+            if (!isNaN(amt)) return sum + amt;
+            const qty = Number(it.quantity || 0);
+            const rate = Number(it.rate || 0);
+            return sum + (qty * rate);
+        }, 0);
 
-// Extract fractional part
+// Fractional part
         const fraction = totalAmount - Math.floor(totalAmount);
 
-// Apply your rule
-        let autoRoundedTotal;
+// Apply your rule: >.50 round up, <=.50 round down
+        let autoRoundedTotal = (fraction > 0.50)
+            ? Math.ceil(totalAmount)
+            : Math.floor(totalAmount);
 
-        if (fraction > 0.50) {
-            autoRoundedTotal = Math.ceil(totalAmount);     // round UP
-        } else if (fraction <= 0.50) {
-            autoRoundedTotal = Math.floor(totalAmount);    // round DOWN
-        } else {
-            autoRoundedTotal = totalAmount;                // exactly .50 → no change
-        }
+// Auto round-off
+        const calculatedRoundOff = autoRoundedTotal - totalAmount;
 
-// Auto-calculated round off difference
-        let calculatedRoundOff = autoRoundedTotal - totalAmount;
-
-// Use DB roundUp if provided, else auto-calculated
-        let roundUp = (bill.roundUp !== undefined && bill.roundUp !== null)
+// Use DB override if provided
+        let roundUpNum = (bill.roundUp !== undefined && bill.roundUp !== null)
             ? Number(bill.roundUp)
             : calculatedRoundOff;
 
-// Prevent NaN
-        if (isNaN(roundUp)) roundUp = 0;
+        if (isNaN(roundUpNum)) roundUpNum = calculatedRoundOff;
 
-// Final grand total
-        const grandTotal = totalAmount + roundUp;
+// Final values
+        const grandTotal = totalAmount + roundUpNum;
 
-// Should we show round-off row?
-        const hasRoundOff = Math.abs(roundUp) >= 0.01;
+// ------------------------------
+// FORMATTED VALUES (with commas)
+// ------------------------------
+        const formattedTotal = totalAmount.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
 
-// ------------------------------------------------------------
-//  DISPLAY TOTALS SECTION
-// ------------------------------------------------------------
+        const formattedRound = (roundUpNum >= 0 ? '+' : '-') +
+            Math.abs(roundUpNum).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+        const formattedGrand = grandTotal.toLocaleString('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+
+// ------------------------------
+// DRAW TOTALS BLOCK
+// ------------------------------
         const totalsY = itemY;
         let grandTotalY = totalsY;
 
-        if (hasRoundOff) {
-            // TOTAL AMOUNT ROW
-            doc.rect(margin, totalsY, contentWidth, 24)
-                .fillAndStroke('#f1f5f9', '#cbd5e1');
+// TOTAL
+        doc.rect(margin, totalsY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
+        doc.text('Total', margin + 320, totalsY + 7);
+        doc.text('Rs. ' + formattedTotal, margin + 420, totalsY + 7, {width: 95, align: 'right'});
 
-            doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-            doc.text('Total Amount:', margin + 320, totalsY + 7);
-            doc.text('Rs. ' + totalAmount.toFixed(2),
-                margin + 420, totalsY + 7,
-                {width: 95, align: 'right'});
+// ROUND OFF
+        const roundOffY = totalsY + 24;
 
-            // ROUND-OFF ROW
-            const roundOffY = totalsY + 24;
+        doc.rect(margin, roundOffY, contentWidth, 24).fillAndStroke('#f1f5f9', '#cbd5e1');
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
+        doc.text('Round Off', margin + 320, roundOffY + 7);
+        doc.text('Rs. ' + formattedRound, margin + 420, roundOffY + 7, {width: 95, align: 'right'});
 
-            doc.rect(margin, roundOffY, contentWidth, 24)
-                .fillAndStroke('#f1f5f9', '#cbd5e1');
+        grandTotalY = roundOffY + 24;
 
-            doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-            doc.text('Round Off:', margin + 320, roundOffY + 7);
-
-            const sign = roundUp >= 0 ? '+' : '';
-            doc.text(
-                'Rs. ' + sign + roundUp.toFixed(2),
-                margin + 420, roundOffY + 7,
-                {width: 95, align: 'right'}
-            );
-
-            grandTotalY = roundOffY + 24;
-        }
-
-// GRAND TOTAL (highlighted)
-        doc.rect(margin, grandTotalY, contentWidth, 30)
-            .fillAndStroke('#1e40af', '#1e40af');
-
+// GRAND TOTAL
+        doc.rect(margin, grandTotalY, contentWidth, 30).fillAndStroke('#1e40af', '#1e40af');
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
         doc.text('GRAND TOTAL:', margin + 320, grandTotalY + 9);
-        doc.text(
-            'Rs. ' + grandTotal.toFixed(2),
-            margin + 420, grandTotalY + 9,
-            {width: 95, align: 'right'}
-        );
+        doc.text('Rs. ' + formattedGrand, margin + 420, grandTotalY + 9, {width: 95, align: 'right'});
 
-// ------------------------------------------------------------
-//  AMOUNT IN WORDS — based on rounded grand total
-// ------------------------------------------------------------
+// AMOUNT IN WORDS
         currentY = grandTotalY + 40;
-
-        doc.rect(margin, currentY, contentWidth, 32)
-            .fillAndStroke('#f8fafc', '#cbd5e1');
-
+        doc.rect(margin, currentY, contentWidth, 32).fillAndStroke('#f8fafc', '#cbd5e1');
         doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155')
             .text('Amount in Words:', margin + 10, currentY + 8);
 
-        const amountInWords = numberToWords(Math.round(grandTotal));
+        const amountInWords = bill.amountInWords || numberToWords(Math.round(grandTotal));
         doc.fontSize(9).font('Helvetica').fillColor('#000000')
-            .text(amountInWords, margin + 10, currentY + 19,
-                {width: contentWidth - 20});
+            .text(amountInWords, margin + 10, currentY + 19, {width: contentWidth - 20});
+
+        itemY = currentY + 32;
 
 
         // Payment Terms and Bank Details
