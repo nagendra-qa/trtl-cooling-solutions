@@ -266,33 +266,96 @@ router.get('/:id/pdf', async (req, res) => {
         // Items Table - Clean Design
         const tableTop = currentY;
 
+        // Calculate dynamic column widths based on actual content
+        const billItems = Array.isArray(bill.items) ? bill.items : [];
+
+        // Set minimum widths for each column
+        const minNoWidth = 30;
+        const minDescWidth = 120;
+        const minSacWidth = 50;
+        const minQtyWidth = 45;
+        const minRateWidth = 60;
+        const minAmountWidth = 80;
+
+        // Measure actual content widths
+        doc.fontSize(9).font('Helvetica');
+        let maxDescWidth = minDescWidth;
+        let maxSacWidth = minSacWidth;
+        let maxQtyWidth = minQtyWidth;
+        let maxRateWidth = minRateWidth;
+        let maxAmountWidth = minAmountWidth;
+
+        billItems.forEach(item => {
+            // Measure description (limit max to avoid too wide)
+            const descWidth = Math.min(doc.widthOfString(item.description || ''), 200);
+            maxDescWidth = Math.max(maxDescWidth, descWidth);
+
+            // Measure SAC
+            const sacWidth = doc.widthOfString(item.sacCode || '-');
+            maxSacWidth = Math.max(maxSacWidth, sacWidth);
+
+            // Measure Qty
+            const qtyWidth = doc.widthOfString((item.quantity || 0).toFixed(2));
+            maxQtyWidth = Math.max(maxQtyWidth, qtyWidth);
+
+            // Measure Rate
+            const rateWidth = doc.widthOfString((item.rate || 0).toFixed(2));
+            maxRateWidth = Math.max(maxRateWidth, rateWidth);
+
+            // Measure Amount (with Rs. prefix)
+            const amountWidth = doc.widthOfString((item.amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            maxAmountWidth = Math.max(maxAmountWidth, amountWidth);
+        });
+
+        // Add padding to measured widths
+        const noColWidth = minNoWidth;
+        let descColWidth = Math.ceil(maxDescWidth) + 15;
+        let sacColWidth = Math.ceil(maxSacWidth) + 20;
+        let qtyColWidth = Math.ceil(maxQtyWidth) + 20;
+        let rateColWidth = Math.ceil(maxRateWidth) + 20;
+        let amountColWidth = Math.ceil(maxAmountWidth) + 20;
+
+        // Ensure columns fit within contentWidth
+        const totalCalculatedWidth = noColWidth + descColWidth + sacColWidth + qtyColWidth + rateColWidth + amountColWidth;
+
+        if (totalCalculatedWidth > contentWidth) {
+            // Scale down if too wide - prioritize keeping Amount, Rate, Qty, SAC at calculated size
+            const fixedWidth = noColWidth + sacColWidth + qtyColWidth + rateColWidth + amountColWidth;
+            descColWidth = contentWidth - fixedWidth;
+        } else if (totalCalculatedWidth < contentWidth) {
+            // If there's extra space, distribute to description and amount columns
+            const extraSpace = contentWidth - totalCalculatedWidth;
+            descColWidth += Math.floor(extraSpace * 0.6);
+            amountColWidth += Math.ceil(extraSpace * 0.4);
+        }
+
         // Table header
         doc.rect(margin, tableTop, contentWidth, 24).fillAndStroke('#3b82f6', '#3b82f6');
 
-        // Column positions
-        const col1 = margin + 5;
-        const col2 = margin + 35;
-        const col3 = margin + 280;
-        const col4 = margin + 340;
-        const col5 = margin + 400;
-        const col6 = margin + 460;
+        // Column positions (cumulative)
+        const col1 = margin + 5;                                    // No.
+        const col2 = margin + noColWidth;                          // Description
+        const col3 = col2 + descColWidth;                          // SAC
+        const col4 = col3 + sacColWidth;                           // Qty
+        const col5 = col4 + qtyColWidth;                           // Rate
+        const col6 = col5 + rateColWidth;                          // Amount
 
         // Draw vertical lines for header
         doc.strokeColor('#ffffff').lineWidth(0.5);
-        doc.moveTo(margin + 30, tableTop).lineTo(margin + 30, tableTop + 24).stroke();
-        doc.moveTo(col3 - 5, tableTop).lineTo(col3 - 5, tableTop + 24).stroke();
-        doc.moveTo(col4 - 5, tableTop).lineTo(col4 - 5, tableTop + 24).stroke();
-        doc.moveTo(col5 - 5, tableTop).lineTo(col5 - 5, tableTop + 24).stroke();
-        doc.moveTo(col6 - 5, tableTop).lineTo(col6 - 5, tableTop + 24).stroke();
+        doc.moveTo(margin + noColWidth, tableTop).lineTo(margin + noColWidth, tableTop + 24).stroke();
+        doc.moveTo(col3, tableTop).lineTo(col3, tableTop + 24).stroke();
+        doc.moveTo(col4, tableTop).lineTo(col4, tableTop + 24).stroke();
+        doc.moveTo(col5, tableTop).lineTo(col5, tableTop + 24).stroke();
+        doc.moveTo(col6, tableTop).lineTo(col6, tableTop + 24).stroke();
 
         // Table Headers
         doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
-        doc.text('No.', col1, tableTop + 7, {width: 20, align: 'center'});
-        doc.text('Description', col2, tableTop + 7, {width: 240});
-        doc.text('SAC', col3, tableTop + 7, {width: 50, align: 'center'});
-        doc.text('Qty', col4, tableTop + 7, {width: 50, align: 'center'});
-        doc.text('Rate', col5, tableTop + 7, {width: 50, align: 'right'});
-        doc.text('Amount', col6, tableTop + 7, {width: 50, align: 'right'});
+        doc.text('No.', col1, tableTop + 7, {width: noColWidth - 5, align: 'center'});
+        doc.text('Description', col2 + 5, tableTop + 7, {width: descColWidth - 10});
+        doc.text('SAC', col3 + 5, tableTop + 7, {width: sacColWidth - 10, align: 'center'});
+        doc.text('Qty', col4 + 5, tableTop + 7, {width: qtyColWidth - 10, align: 'center'});
+        doc.text('Rate', col5 + 5, tableTop + 7, {width: rateColWidth - 10, align: 'right'});
+        doc.text('Amount', col6 + 5, tableTop + 7, {width: amountColWidth - 10, align: 'right'});
 
         // Table Items
         let itemY = tableTop + 24;
@@ -304,7 +367,7 @@ router.get('/:id/pdf', async (req, res) => {
                 itemY = margin;
             }
 
-            const descHeight = doc.heightOfString(item.description, {width: 235});
+            const descHeight = doc.heightOfString(item.description, {width: descColWidth - 10});
             const rowHeight = Math.max(26, descHeight + 12);
 
             // Row background
@@ -315,20 +378,20 @@ router.get('/:id/pdf', async (req, res) => {
             }
 
             // Draw vertical lines
-            doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + rowHeight).stroke();
-            doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + rowHeight).stroke();
-            doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + rowHeight).stroke();
-            doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + rowHeight).stroke();
-            doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + rowHeight).stroke();
+            doc.moveTo(margin + noColWidth, itemY).lineTo(margin + noColWidth, itemY + rowHeight).stroke();
+            doc.moveTo(col3, itemY).lineTo(col3, itemY + rowHeight).stroke();
+            doc.moveTo(col4, itemY).lineTo(col4, itemY + rowHeight).stroke();
+            doc.moveTo(col5, itemY).lineTo(col5, itemY + rowHeight).stroke();
+            doc.moveTo(col6, itemY).lineTo(col6, itemY + rowHeight).stroke();
 
             // Item data
             doc.fillColor('#000000');
-            doc.text((index + 1).toString(), col1, itemY + 8, {width: 20, align: 'center'});
-            doc.text(item.description, col2, itemY + 8, {width: 235});
-            doc.text(item.sacCode || '-', col3, itemY + 8, {width: 50, align: 'center'});
-            doc.text((item.quantity || 0).toFixed(2), col4, itemY + 8, {width: 50, align: 'center'});
-            doc.text((item.rate || 0).toFixed(2), col5, itemY + 8, {width: 50, align: 'right'});
-            doc.text((item.amount || 0).toFixed(2), col6, itemY + 8, {width: 50, align: 'right'});
+            doc.text((index + 1).toString(), col1, itemY + 8, {width: noColWidth - 5, align: 'center'});
+            doc.text(item.description, col2 + 5, itemY + 8, {width: descColWidth - 10});
+            doc.text(item.sacCode || '-', col3 + 5, itemY + 8, {width: sacColWidth - 10, align: 'center'});
+            doc.text((item.quantity || 0).toFixed(2), col4 + 5, itemY + 8, {width: qtyColWidth - 10, align: 'center'});
+            doc.text((item.rate || 0).toFixed(2), col5 + 5, itemY + 8, {width: rateColWidth - 10, align: 'right'});
+            doc.text((item.amount || 0).toFixed(2), col6 + 5, itemY + 8, {width: amountColWidth - 10, align: 'right'});
 
             itemY += rowHeight;
         });
@@ -343,7 +406,7 @@ router.get('/:id/pdf', async (req, res) => {
 
             // Label uses bold 9 (or 10 for placeholder) — set font/size before measuring
             doc.font('Helvetica-Bold').fontSize(9);
-            const labelWidth = 240;
+            const labelWidth = descColWidth - 10;  // Use dynamic description column width
             const labelHeight = doc.heightOfString(labelText, {width: labelWidth});
 
             // Notes use normal font (or oblique for placeholder). We'll measure with same font/size you'll draw.
@@ -353,7 +416,7 @@ router.get('/:id/pdf', async (req, res) => {
                 doc.font('Helvetica-Oblique').fontSize(8);
             }
 
-            const notesAvailableWidth = contentWidth - 75; // same as your text call
+            const notesAvailableWidth = contentWidth - noColWidth - 10; // Full width minus No. column
             const notesHeight = doc.heightOfString(notesText, {width: notesAvailableWidth});
 
             // padding: top + between label & notes + bottom
@@ -374,29 +437,29 @@ router.get('/:id/pdf', async (req, res) => {
             doc.rect(margin, itemY, contentWidth, commentsRowHeight).stroke();
 
             // Draw vertical line after No. column
-            doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
+            doc.moveTo(margin + noColWidth, itemY).lineTo(margin + noColWidth, itemY + commentsRowHeight).stroke();
 
             // Draw all column lines for comments row
-            doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + commentsRowHeight).stroke();
-            doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + commentsRowHeight).stroke();
-            doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + commentsRowHeight).stroke();
-            doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + commentsRowHeight).stroke();
+            doc.moveTo(col3, itemY).lineTo(col3, itemY + commentsRowHeight).stroke();
+            doc.moveTo(col4, itemY).lineTo(col4, itemY + commentsRowHeight).stroke();
+            doc.moveTo(col5, itemY).lineTo(col5, itemY + commentsRowHeight).stroke();
+            doc.moveTo(col6, itemY).lineTo(col6, itemY + commentsRowHeight).stroke();
 
             // Draw the label and notes using the same measurement choices
             if (bill.notes && bill.notes.trim() !== '') {
                 doc.fontSize(9).font('Helvetica-Bold').fillColor('#92400e');
-                doc.text(labelText, col2, itemY + paddingTop, {width: labelWidth});
+                doc.text(labelText, col2 + 5, itemY + paddingTop, {width: labelWidth});
 
                 doc.fontSize(9).font('Helvetica').fillColor('#000000');
                 // place notes below label (use labelHeight + paddingBetween)
-                doc.text(bill.notes, col2, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
+                doc.text(bill.notes, col2 + 5, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
             } else {
                 // placeholder style
                 doc.fontSize(10).font('Helvetica-Bold').fillColor('#92400e');
-                doc.text(labelText, col2, itemY + paddingTop, {width: labelWidth});
+                doc.text(labelText, col2 + 5, itemY + paddingTop, {width: labelWidth});
 
                 doc.fontSize(8).font('Helvetica-Oblique').fillColor('#78716c');
-                doc.text(notesText, col2, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
+                doc.text(notesText, col2 + 5, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
             }
 
             // advance itemY by the computed height
@@ -462,12 +525,13 @@ router.get('/:id/pdf', async (req, res) => {
 // ------------------------------
         const totalsY = itemY;
 
-// Define the totals section to be aligned within the table
-        const totalsBoxWidth = 250;  // Width of the totals area
+// Define the totals section to be aligned within the table (right-aligned)
+        const totalsBoxWidth = 200;  // Reduced width to fit better
         const totalsBoxLeft = margin + contentWidth - totalsBoxWidth;  // Right-aligned within table
 
         const labelX = totalsBoxLeft + 10;      // Label position with padding
-        const valueX = totalsBoxLeft + totalsBoxWidth - 10;  // Value position (right-aligned with padding)
+        const valueWidth = 110;  // Width for value column
+        const valueX = totalsBoxLeft + totalsBoxWidth - valueWidth - 5;  // Value position
 
         const smallRowH = 24;
         const grandRowH = 30;
@@ -487,14 +551,14 @@ router.get('/:id/pdf', async (req, res) => {
         fillThenStroke(totalsBoxLeft, totalsY, totalsBoxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
         doc.text('Total', labelX, totalsY + 7);
-        doc.text('Rs. ' + formattedTotal, valueX - 90, totalsY + 7, {width: 90, align: 'right'});
+        doc.text('Rs. ' + formattedTotal, valueX, totalsY + 7, {width: valueWidth, align: 'right'});
 
         // ROUND OFF (compact box)
         const roundOffY = totalsY + smallRowH;
         fillThenStroke(totalsBoxLeft, roundOffY, totalsBoxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
         doc.text('Round Off', labelX, roundOffY + 7);
-        doc.text('Rs. ' + formattedRound, valueX - 90, roundOffY + 7, {width: 90, align: 'right'});
+        doc.text('Rs. ' + formattedRound, valueX, roundOffY + 7, {width: valueWidth, align: 'right'});
 
         // GRAND TOTAL (boxed blue, limited width)
         const grandTotalY = roundOffY + smallRowH;
@@ -507,7 +571,7 @@ router.get('/:id/pdf', async (req, res) => {
 
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
         doc.text('GRAND TOTAL', labelX, grandTotalY + 9);
-        doc.text('Rs. ' + formattedGrand, valueX - 90, grandTotalY + 9, {width: 90, align: 'right'});
+        doc.text('Rs. ' + formattedGrand, valueX, grandTotalY + 9, {width: valueWidth, align: 'right'});
 
         // AMOUNT IN WORDS (keeps full width area but stroke drawn after fill so border is crisp)
         currentY = grandTotalY + grandRowH + 10;
