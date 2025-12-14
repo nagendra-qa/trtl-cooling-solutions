@@ -110,7 +110,7 @@ router.delete('/:id', async (req, res) => {
     } catch (error) {
         res.status(500).json({message: error.message});
     }
-});
+ });
 
 // Generate PDF bill
 router.get('/:id/pdf', async (req, res) => {
@@ -121,67 +121,58 @@ router.get('/:id/pdf', async (req, res) => {
             .populate('workOrder');
 
         if (!bill) {
-            return res.status(404).json({message: 'Bill not found'});
+            return res.status(404).json({ message: 'Bill not found' });
         }
 
-        // Create PDF with clean professional design
-        const doc = new PDFDocument({margin: 40, size: 'A4'});
+        const doc = new PDFDocument({ margin: 40, size: 'A4' });
 
-        // Set response headers
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=Invoice-${bill.billNumber}.pdf`);
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=Invoice-${bill.billNumber}.pdf`
+        );
 
         doc.pipe(res);
 
         const pageWidth = 595.28;
         const margin = 40;
-        const contentWidth = pageWidth - (margin * 2);
+        const contentWidth = pageWidth - margin * 2;
 
-        // Helper function to draw box
-        const drawBox = (x, y, width, height, color = '#000000') => {
-            doc.strokeColor(color).lineWidth(1).rect(x, y, width, height).stroke();
+        const drawBox = (x, y, w, h, color = '#cbd5e1') => {
+            doc.strokeColor(color).rect(x, y, w, h).stroke();
         };
 
-        // =========================
-// COMPANY HEADER (UPDATED CLEAN DESIGN)
-// =========================
+        /* ================= HEADER ================= */
 
-// Company Name
-        doc.fontSize(22)
-            .font('Helvetica-Bold')
-            .fillColor('#2563eb')
+        doc.fontSize(22).font('Helvetica-Bold').fillColor('#2563eb')
             .text(process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO', margin, margin);
 
-// Details Text Style
-        doc.fontSize(10)
-            .font('Helvetica')
-            .fillColor('#666666');
-
+        doc.fontSize(10).font('Helvetica').fillColor('#666');
         let headerY = margin + 30;
 
-// PAN + Mobile (Same Line, Clean Spacing)
-        const panText = `PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}`;
-        const mobileText = `Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`;
+        doc.text(
+            `PAN: ${process.env.COMPANY_PAN || 'DJYPM4672Q'}   |   Mobile: ${process.env.COMPANY_PHONE || '+91-8179697191'}`,
+            margin,
+            headerY,
+            { width: contentWidth }
+        );
 
-        doc.text(`${panText}    |    ${mobileText}`, margin, headerY, {
-            width: contentWidth
-        });
-
-// Address (Full Width Below)
         doc.text(
             process.env.COMPANY_BILL_ADDRESS ||
             'D.No.2-12, Kollapalem, Kaja, Krishna DT, Andhra Pradesh - 521150',
             margin,
             headerY + 16,
-            {width: contentWidth}
+            { width: contentWidth }
         );
 
+        doc.moveTo(margin, headerY + 35)
+            .lineTo(margin + contentWidth, headerY + 35)
+            .lineWidth(2)
+            .strokeColor('#2563eb')
+            .stroke();
 
-        // Horizontal line separator
-        doc.strokeColor('#2563eb').lineWidth(2)
-            .moveTo(margin, headerY + 35).lineTo(margin + contentWidth, headerY + 35).stroke();
+        /* ================= INVOICE TITLE ================= */
 
-        // INVOICE Title
         let currentY = headerY + 50;
         doc.fontSize(20).font('Helvetica-Bold').fillColor('#1e40af')
             .text('INVOICE', margin, currentY);
@@ -189,87 +180,14 @@ router.get('/:id/pdf', async (req, res) => {
         currentY += 35;
         const halfWidth = (contentWidth - 15) / 2;
 
-        // Invoice Details Section - Simple Boxes
-        // Left: Invoice Info
-        drawBox(margin, currentY, halfWidth, 50, '#cbd5e1');
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('INVOICE NUMBER :', margin + 10, currentY + 12);
-        doc.font('Helvetica').fillColor('#000000');
-        doc.text(bill.billNumber, margin + 100, currentY + 12);
-
-        doc.font('Helvetica-Bold').fillColor('#334155');
-        doc.text('INVOICE DATE :', margin + 10, currentY + 28);
-        doc.font('Helvetica').fillColor('#000000');
-        doc.text(new Date(bill.billDate).toLocaleDateString('en-GB'), margin + 100, currentY + 28);
-
-        // Right: Work Order Info
-        drawBox(margin + halfWidth + 15, currentY, halfWidth, 50, '#cbd5e1');
-        if (bill.customerWONumber) {
-            doc.font('Helvetica-Bold').fillColor('#334155');
-            doc.text('WORK ORDER NO :', margin + halfWidth + 25, currentY + 12);
-            doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.customerWONumber, margin + halfWidth + 120, currentY + 12);
-        }
-        if (bill.customerWODate) {
-            doc.font('Helvetica-Bold').fillColor('#334155');
-            doc.text('WO DATE :', margin + halfWidth + 25, currentY + 28);
-            doc.font('Helvetica').fillColor('#000000');
-            doc.text(new Date(bill.customerWODate).toLocaleDateString('en-GB'), margin + halfWidth + 120, currentY + 28);
-        }
-
-        // Bill To & Project Section
-        currentY += 60;
-
-        // Left: Bill To
-        drawBox(margin, currentY, halfWidth, 100, '#cbd5e1');
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
-            .text('BILL TO', margin + 10, currentY + 8);
-
-        doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000')
-            .text('VK Building Services Pvt Ltd', margin + 10, currentY + 24);
-
-        doc.fontSize(8).font('Helvetica').fillColor('#333333');
-        doc.text('1st Floor Krishe Sapphire, Sri Krishna Developers,', margin + 10, currentY + 40);
-        doc.text('Sy No 88 Opp Vishal Peripherals,', margin + 10, currentY + 52);
-        doc.text('Madhapur, Telangana, Hyderabad 500081', margin + 10, currentY + 64);
-
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('GSTIN/PAN:', margin + 10, currentY + 80);
-        doc.font('Helvetica').fillColor('#000000');
-        doc.text('36AADCV1173D1ZL', margin + 60, currentY + 80);
-
-        // Right: Project & Reference
-        drawBox(margin + halfWidth + 15, currentY, halfWidth, 100, '#cbd5e1');
-        let rightY = currentY + 24;
-
-        // PROJECT
-        if (bill.projectName) {
-            doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
-            doc.text('PROJECT :', margin + halfWidth + 25, rightY);
-
-            doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.projectName, margin + halfWidth + 80, rightY); // Adjust this
-            rightY += 14;
-        }
-
-// REFERENCE
-        if (bill.referenceNo) {
-            doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155');
-            doc.text('REFERENCE :', margin + halfWidth + 25, rightY);
-
-            doc.font('Helvetica').fillColor('#000000');
-            doc.text(bill.referenceNo, margin + halfWidth + 90, rightY); // SAME alignment
-        }
+        /* ================= TABLE ================= */
 
         currentY += 110;
-
-        // Items Table - Clean Design
         const tableTop = currentY;
 
-        // Table header
-        doc.rect(margin, tableTop, contentWidth, 24).fillAndStroke('#3b82f6', '#3b82f6');
+        doc.rect(margin, tableTop, contentWidth, 24)
+            .fillAndStroke('#3b82f6', '#3b82f6');
 
-        // Column positions
         const col1 = margin + 5;
         const col2 = margin + 35;
         const col3 = margin + 280;
@@ -277,335 +195,70 @@ router.get('/:id/pdf', async (req, res) => {
         const col5 = margin + 400;
         const col6 = margin + 460;
 
-        // Draw vertical lines for header
-        doc.strokeColor('#ffffff').lineWidth(0.5);
-        doc.moveTo(margin + 30, tableTop).lineTo(margin + 30, tableTop + 24).stroke();
-        doc.moveTo(col3 - 5, tableTop).lineTo(col3 - 5, tableTop + 24).stroke();
-        doc.moveTo(col4 - 5, tableTop).lineTo(col4 - 5, tableTop + 24).stroke();
-        doc.moveTo(col5 - 5, tableTop).lineTo(col5 - 5, tableTop + 24).stroke();
-        doc.moveTo(col6 - 5, tableTop).lineTo(col6 - 5, tableTop + 24).stroke();
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#fff');
+        doc.text('No.', col1, tableTop + 7, { width: 20, align: 'center' });
+        doc.text('Description', col2, tableTop + 7, { width: 240 });
+        doc.text('SAC', col3, tableTop + 7, { width: 50, align: 'center' });
+        doc.text('Qty', col4, tableTop + 7, { width: 50, align: 'center' });
+        doc.text('Rate', col5, tableTop + 7, { width: 50, align: 'right' });
+        doc.text('Amount', col6, tableTop + 7, { width: 50, align: 'right' });
 
-        // Table Headers
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
-        doc.text('No.', col1, tableTop + 7, {width: 20, align: 'center'});
-        doc.text('Description', col2, tableTop + 7, {width: 240});
-        doc.text('SAC', col3, tableTop + 7, {width: 50, align: 'center'});
-        doc.text('Qty', col4, tableTop + 7, {width: 50, align: 'center'});
-        doc.text('Rate', col5, tableTop + 7, {width: 50, align: 'right'});
-        doc.text('Amount', col6, tableTop + 7, {width: 50, align: 'right'});
-
-        // Table Items
         let itemY = tableTop + 24;
-        doc.fontSize(9).font('Helvetica').strokeColor('#cbd5e1').lineWidth(0.5);
+        doc.fontSize(9).font('Helvetica').fillColor('#000');
 
         bill.items.forEach((item, index) => {
-            if (itemY > 680) {
-                doc.addPage();
-                itemY = margin;
-            }
+            const rowH = 26;
+            doc.rect(margin, itemY, contentWidth, rowH)
+                .strokeColor('#cbd5e1')
+                .stroke();
 
-            const descHeight = doc.heightOfString(item.description, {width: 235});
-            const rowHeight = Math.max(26, descHeight + 12);
+            doc.text(index + 1, col1, itemY + 8, { width: 20, align: 'center' });
+            doc.text(item.description, col2, itemY + 8, { width: 235 });
+            doc.text(item.sacCode || '-', col3, itemY + 8, { width: 50, align: 'center' });
+            doc.text(item.quantity.toFixed(2), col4, itemY + 8, { width: 50, align: 'center' });
+            doc.text(item.rate.toFixed(2), col5, itemY + 8, { width: 50, align: 'right' });
+            doc.text(item.amount.toFixed(2), col6, itemY + 8, { width: 50, align: 'right' });
 
-            // Row background
-            if (index % 2 === 0) {
-                doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#f8fafc', '#cbd5e1');
-            } else {
-                doc.rect(margin, itemY, contentWidth, rowHeight).fillAndStroke('#ffffff', '#cbd5e1');
-            }
-
-            // Draw vertical lines
-            doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + rowHeight).stroke();
-            doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + rowHeight).stroke();
-            doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + rowHeight).stroke();
-            doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + rowHeight).stroke();
-            doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + rowHeight).stroke();
-
-            // Item data
-            doc.fillColor('#000000');
-            doc.text((index + 1).toString(), col1, itemY + 8, {width: 20, align: 'center'});
-            doc.text(item.description, col2, itemY + 8, {width: 235});
-            doc.text(item.sacCode || '-', col3, itemY + 8, {width: 50, align: 'center'});
-            doc.text((item.quantity || 0).toFixed(2), col4, itemY + 8, {width: 50, align: 'center'});
-            doc.text((item.rate || 0).toFixed(2), col5, itemY + 8, {width: 50, align: 'right'});
-            doc.text((item.amount || 0).toFixed(2), col6, itemY + 8, {width: 50, align: 'right'});
-
-            itemY += rowHeight;
+            itemY += rowH;
         });
 
-        // ------------------------------
-// Add blank row for comments - auto-height and crisp borders
-// ------------------------------
-        (function () {
-            // Prepare text and fonts used for measurement
-            const labelText = 'Comments / Notes:';
-            const notesText = (bill.notes && bill.notes.trim() !== '') ? bill.notes : '(Space for additional remarks or instructions)';
+        /* ================= TOTALS (FIXED & ALIGNED) ================= */
 
-            // Label uses bold 9 (or 10 for placeholder) — set font/size before measuring
-            doc.font('Helvetica-Bold').fontSize(9);
-            const labelWidth = 240;
-            const labelHeight = doc.heightOfString(labelText, {width: labelWidth});
+        const totalAmount = bill.items.reduce((s, i) => s + Number(i.amount || 0), 0);
+        const roundOff = bill.roundUp || 0;
+        const grandTotal = totalAmount + roundOff;
 
-            // Notes use normal font (or oblique for placeholder). We'll measure with same font/size you'll draw.
-            if (bill.notes && bill.notes.trim() !== '') {
-                doc.font('Helvetica').fontSize(9);
-            } else {
-                doc.font('Helvetica-Oblique').fontSize(8);
-            }
+        const totalsWidth = 240;
+        const totalsX = margin + contentWidth - totalsWidth;
+        const rowH = 26;
 
-            const notesAvailableWidth = contentWidth - 75; // same as your text call
-            const notesHeight = doc.heightOfString(notesText, {width: notesAvailableWidth});
+        const drawTotalRow = (y, label, value, bg = '#f1f5f9', bold = false) => {
+            doc.fillColor(bg).rect(totalsX, y, totalsWidth, rowH).fill();
+            doc.strokeColor('#cbd5e1').rect(totalsX, y, totalsWidth, rowH).stroke();
 
-            // padding: top + between label & notes + bottom
-            const paddingTop = 8;
-            const paddingBetween = 6;
-            const paddingBottom = 8;
+            doc.font(bold ? 'Helvetica-Bold' : 'Helvetica')
+                .fontSize(10)
+                .fillColor('#334155')
+                .text(label, totalsX + 10, y + 8);
 
-            const computedHeight = Math.ceil(labelHeight + paddingTop + paddingBetween + notesHeight + paddingBottom);
-
-            // Minimum height (keeps previous look)
-            const commentsRowHeight = Math.max(50, computedHeight);
-
-            // Ensure fill is drawn first then stroke (so stroke is visible)
-            doc.fillColor('#fef3c7');
-            doc.rect(margin, itemY, contentWidth, commentsRowHeight).fill();
-
-            doc.strokeColor('#cbd5e1');
-            doc.rect(margin, itemY, contentWidth, commentsRowHeight).stroke();
-
-            // Draw vertical line after No. column
-            doc.moveTo(margin + 30, itemY).lineTo(margin + 30, itemY + commentsRowHeight).stroke();
-
-            // Draw all column lines for comments row
-            doc.moveTo(col3 - 5, itemY).lineTo(col3 - 5, itemY + commentsRowHeight).stroke();
-            doc.moveTo(col4 - 5, itemY).lineTo(col4 - 5, itemY + commentsRowHeight).stroke();
-            doc.moveTo(col5 - 5, itemY).lineTo(col5 - 5, itemY + commentsRowHeight).stroke();
-            doc.moveTo(col6 - 5, itemY).lineTo(col6 - 5, itemY + commentsRowHeight).stroke();
-
-            // Draw the label and notes using the same measurement choices
-            if (bill.notes && bill.notes.trim() !== '') {
-                doc.fontSize(9).font('Helvetica-Bold').fillColor('#92400e');
-                doc.text(labelText, col2, itemY + paddingTop, {width: labelWidth});
-
-                doc.fontSize(9).font('Helvetica').fillColor('#000000');
-                // place notes below label (use labelHeight + paddingBetween)
-                doc.text(bill.notes, col2, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
-            } else {
-                // placeholder style
-                doc.fontSize(10).font('Helvetica-Bold').fillColor('#92400e');
-                doc.text(labelText, col2, itemY + paddingTop, {width: labelWidth});
-
-                doc.fontSize(8).font('Helvetica-Oblique').fillColor('#78716c');
-                doc.text(notesText, col2, itemY + paddingTop + labelHeight + paddingBetween, {width: notesAvailableWidth});
-            }
-
-            // advance itemY by the computed height
-            itemY += commentsRowHeight;
-        })();
-
-// ------------------------------
-// TOTALS, ROUND-OFF & GRAND TOTAL
-// ------------------------------
-        const items = Array.isArray(bill.items) ? bill.items : [];
-
-// Compute numeric totalAmount (fallback to qty*rate if amount missing)
-        const totalAmount = items.reduce((sum, it) => {
-            const amt = Number(it.amount);
-            if (!isNaN(amt)) return sum + amt;
-            const qty = Number(it.quantity || 0);
-            const rate = Number(it.rate || 0);
-            return sum + (qty * rate);
-        }, 0);
-
-// Fractional part
-        const fraction = totalAmount - Math.floor(totalAmount);
-
-// Apply your rule: >.50 round up, <=.50 round down
-        let autoRoundedTotal = (fraction > 0.50)
-            ? Math.ceil(totalAmount)
-            : Math.floor(totalAmount);
-
-// Auto round-off
-        const calculatedRoundOff = autoRoundedTotal - totalAmount;
-
-// Use DB override if provided
-        let roundUpNum = (bill.roundUp !== undefined && bill.roundUp !== null)
-            ? Number(bill.roundUp)
-            : calculatedRoundOff;
-
-        if (isNaN(roundUpNum)) roundUpNum = calculatedRoundOff;
-
-// Final values
-        const grandTotal = totalAmount + roundUpNum;
-
-// ------------------------------
-// FORMATTED VALUES (with commas)
-// ------------------------------
-        const formattedTotal = totalAmount.toLocaleString('en-IN', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-
-        const formattedRound = (roundUpNum >= 0 ? '+' : '-') +
-            Math.abs(roundUpNum).toLocaleString('en-IN', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+            doc.text(`Rs. ${value}`, totalsX + totalsWidth - 10, y + 8, {
+                width: totalsWidth - 20,
+                align: 'right'
             });
+        };
 
-        const formattedGrand = grandTotal.toLocaleString('en-IN', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-
-// ------------------------------
-// DRAW TOTALS BLOCK (compact fixed boxes aligned to the right INSIDE table)
-// ------------------------------
-        const totalsY = itemY;
-
-// Positioning: keep your original text Xs but box the background to a compact region
-        const labelX = margin + 320;      // label x (same as your original)
-        const valueX = margin + 420;      // value x (same as your original)
-        let boxWidth = 220;               // preferred width of the compact totals area
-
-// Ensure boxWidth never exceeds contentWidth minus some padding
-        const innerPadding = 10; // gap between right table edge and box
-        boxWidth = Math.min(boxWidth, contentWidth - (innerPadding * 2));
-
-// Right-align the box inside the table content area so it won't go out of bounds
-        const boxLeft = margin + contentWidth - boxWidth - innerPadding;
-
-        const smallRowH = 24;
-        const grandRowH = 30;
-
-// Helper: fill then stroke so stroke is drawn on top (prevents fill hiding borders)
-        function fillThenStroke(x, y, w, h, fillColor, strokeColor) {
-            doc.save();
-            doc.fillColor(fillColor);
-            doc.rect(x, y, w, h).fill();
-
-            doc.strokeColor(strokeColor);
-            doc.rect(x, y, w, h).stroke();
-            doc.restore();
-        }
-
-// Compute effective text X positions so labels/values don't draw outside the box
-        const effectiveLabelX = Math.max(labelX, boxLeft + 8);
-        const effectiveValueX = Math.min(valueX, boxLeft + boxWidth - 8);
-
-        // TOTAL (compact box)
-        fillThenStroke(boxLeft, totalsY, boxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('Total', effectiveLabelX, totalsY + 7);
-        doc.text('Rs. ' + formattedTotal, effectiveValueX, totalsY + 7, {width: 95, align: 'right'});
-
-        // ROUND OFF (compact box)
-        const roundOffY = totalsY + smallRowH;
-        fillThenStroke(boxLeft, roundOffY, boxWidth, smallRowH, '#f1f5f9', '#cbd5e1');
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#334155');
-        doc.text('Round Off', effectiveLabelX, roundOffY + 7);
-        doc.text('Rs. ' + formattedRound, effectiveValueX, roundOffY + 7, {width: 95, align: 'right'});
-
-        // GRAND TOTAL (boxed blue, limited width)
-        const grandTotalY = roundOffY + smallRowH;
-        doc.save();
-        doc.fillColor('#1e40af');
-        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).fill();
-        doc.strokeColor('#1e40af');
-        doc.rect(boxLeft, grandTotalY, boxWidth, grandRowH).stroke();
-        doc.restore();
-
-        doc.fontSize(12).font('Helvetica-Bold').fillColor('#FFFFFF');
-        doc.text('GRAND TOTAL', effectiveLabelX, grandTotalY + 9);
-        doc.text('Rs. ' + formattedGrand, effectiveValueX, grandTotalY + 9, {width: 95, align: 'right'});
-
-     // AMOUNT IN WORDS (keeps full width area but stroke drawn after fill so border is crisp)
-        currentY = grandTotalY + grandRowH + 10;
-        const wordsH = 32;
-        doc.fillColor('#f8fafc');
-        doc.rect(margin, currentY, contentWidth, wordsH).fill();
-
-        doc.strokeColor('#cbd5e1');
-        doc.rect(margin, currentY, contentWidth, wordsH).stroke();
-
-        doc.fontSize(8).font('Helvetica-Bold').fillColor('#334155')
-            .text('Amount in Words:', margin + 10, currentY + 8);
-
-        const amountInWords = bill.amountInWords || numberToWords(Math.round(grandTotal));
-        doc.fontSize(9).font('Helvetica').fillColor('#000000')
-            .text(amountInWords, margin + 10, currentY + 19, {width: contentWidth - 20});
-
-     // update itemY to continue further drawing
-        itemY = currentY + wordsH + 8;
-
-
-// Payment Terms and Bank Details
-        currentY += 42;
-        const boxHeight = 70;
-
-
-        // Payment Terms
-        drawBox(margin, currentY, halfWidth, boxHeight, '#cbd5e1');
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
-            .text('Payment Terms', margin + 10, currentY + 8);
-        doc.fontSize(9).font('Helvetica').fillColor('#333333')
-            .text(bill.paymentTerms || '30 Days credit', margin + 10, currentY + 26);
-
-        // Bank Details
-        drawBox(margin + halfWidth + 15, currentY, halfWidth, boxHeight, '#cbd5e1');
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1e40af')
-            .text('Bank Details', margin + halfWidth + 25, currentY + 8);
-        doc.fontSize(8).font('Helvetica').fillColor('#333333');
-        doc.text(`Account Name: ${process.env.BANK_ACCOUNT_NAME || 'M Picheswara Rao'}`,
-            margin + halfWidth + 25, currentY + 26);
-        doc.text(`Account No: ${process.env.BANK_ACCOUNT_NO || '782701505244'}`,
-            margin + halfWidth + 25, currentY + 38);
-        doc.text(`IFSC Code: ${process.env.BANK_IFSC || 'ICIC0007827'}`,
-            margin + halfWidth + 25, currentY + 50);
-
-        // Signature Section
-        currentY += boxHeight + 20;
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#334155')
-            .text('For ' + (process.env.COMPANY_NAME || 'MEEGADA PICHESWARA RAO'),
-                margin + contentWidth - 160, currentY, {width: 160, align: 'right'});
-
-        currentY += 25;
-        doc.moveTo(margin + contentWidth - 140, currentY).lineTo(margin + contentWidth, currentY)
-            .strokeColor('#2563eb').lineWidth(1.5).stroke();
-        doc.fontSize(8).font('Helvetica').fillColor('#666666')
-            .text('Authorized Signatory', margin + contentWidth - 140, currentY + 3, {width: 140, align: 'right'});
-
-        const footerHeight = 48;
-        let footerY = doc.page.height - margin - footerHeight;
-
-        if (currentY + footerHeight + 20 > doc.page.height - margin) {
-            doc.addPage();
-            footerY = doc.page.height - margin - footerHeight;
-        }
-
-        doc.strokeColor('#cbd5f5').lineWidth(0.5)
-            .moveTo(margin, footerY - 8).lineTo(margin + contentWidth, footerY - 8).stroke();
-
-        doc.fontSize(10).font('Helvetica').fillColor('#6b7280');
-        doc.text('Thank you for your business.', margin, footerY);
-        doc.text('We appreciate the opportunity to serve you.', margin, footerY + 12);
-
-        const centerX = margin + contentWidth / 2 - 80;
-        doc.text('For service or billing queries:', centerX, footerY, {width: 160, align: 'center'});
-        doc.text(`Call: ${process.env.COMPANY_PHONE || '+91-8179697191'}`, centerX, footerY + 12, {
-            width: 160,
-            align: 'center'
-        });
-
-        const rightX = margin + contentWidth - 220;
-        doc.fontSize(9);
-        doc.text('This is a computer-generated invoice', rightX, footerY, {width: 220, align: 'right'});
-        doc.text(`Invoice No: ${bill.billNumber}`, rightX, footerY + 12, {width: 220, align: 'right'});
+        drawTotalRow(itemY + 10, 'Total', totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 }));
+        drawTotalRow(itemY + 36, 'Round Off', roundOff.toFixed(2));
+        drawTotalRow(itemY + 62, 'GRAND TOTAL',
+            grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+            '#1e40af',
+            true
+        );
 
         doc.end();
-    } catch (error) {
-        console.error('PDF generation error:', error);
-        res.status(500).json({message: error.message});
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: err.message });
     }
 });
-
-module.exports = router;
